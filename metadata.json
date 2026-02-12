@@ -1,0 +1,5 @@
+{
+  "name": "GMC Flow Engine Simulator",
+  "description": "Internal tool for testing insurance policy enrollment configurations and visualizing UI flows.",
+  "requestFramePermissions": []
+}

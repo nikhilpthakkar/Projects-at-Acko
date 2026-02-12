@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GMC Flow Engine Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              purple: {
+                800: 'var(--purple-800)',
+                700: 'var(--purple-700)',
+                600: 'var(--purple-600)',
+                500: 'var(--purple-500)',
+                400: 'var(--purple-400)',
+                300: 'var(--purple-300)',
+                200: 'var(--purple-200)',
+                100: 'var(--purple-100)',
+              },
+              onyx: {
+                800: 'var(--onyx-800)',
+                700: 'var(--onyx-700)',
+                600: 'var(--onyx-600)',
+                500: 'var(--onyx-500)',
+                400: 'var(--onyx-400)',
+                300: 'var(--onyx-300)',
+                200: 'var(--onyx-200)',
+                100: 'var(--onyx-100)',
+              },
+              green: {
+                700: 'var(--green-700)',
+                600: 'var(--green-600)',
+                500: 'var(--green-500)',
+                200: 'var(--green-200)',
+                100: 'var(--green-100)',
+              },
+              orange: {
+                700: 'var(--orange-700)',
+                500: 'var(--orange-500)',
+                200: 'var(--orange-200)',
+                100: 'var(--orange-100)',
+              },
+              cerise: {
+                700: 'var(--cerise-700)',
+                500: 'var(--cerise-500)',
+                200: 'var(--cerise-200)',
+              },
+              blue: {
+                700: 'var(--blue-700)',
+                500: 'var(--blue-500)',
+                200: 'var(--blue-200)',
+              }
+            },
+            fontFamily: {
+              sans: ['"Euclid Circular B"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
