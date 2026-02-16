@@ -1,0 +1,17 @@
+Layer,Construct,Headline,Subtext,Primary CTA,Secondary CTA,Tooltips,Anxiety Reducers
+L0,VANILLA,Let's set up your health coverage,Review your benefits from [Company],Get Started,,,"~5 minutes to complete; You can change selections later"
+L0,MODULAR,Let's set up your health coverage,Choose your benefits from [Company],Get Started,,,"~5 minutes to complete; You can change selections later"
+L0,FLEX,Let's set up your health coverage,You have a benefits wallet to customize your protection,Get Started,,,"~5 minutes to complete; You can change selections later"
+L1,VANILLA,Your coverage from [Company],₹5 lakh coverage for your family,Continue,,"Sum Insured; Floater; Cashless",
+L1,MODULAR,Your coverage from [Company],₹5 lakh coverage for your family,Continue,,"Sum Insured; Floater; Cashless",
+L1,FLEX,Your benefits wallet,₹25000 to build your protection,Continue,,"Sum Insured; Floater; Cashless",
+L2,ALL,Your covered family members,Review and update if needed,Continue,+ Add family member,"Dependent; Relationship",
+L3,VANILLA,(Layer skipped),,,,,,
+L3,MODULAR,Upgrade your plan,Choose a higher tier,Continue,,"Tier; Sum Insured",Compare plans side-by-side
+L3,FLEX,Configure your coverage,Select Sum Insured and family coverage,Continue,,"Tier; Sum Insured",Compare plans side-by-side
+L4,EMPLOYER-PAID,Enhance your coverage,Additional benefits included,Continue,Skip enhancements,"Top-up; Secondary; Add-on",Most popular choices highlighted
+L4,EMPLOYEE-PAID,Enhance your coverage,Add more protection (employee-paid),Continue,Skip enhancements,"Top-up; Secondary; Add-on",Most popular choices highlighted
+L5,VANILLA/MODULAR,Your investment,Review your premium breakdown,Continue to Review,,"Premium; Salary Deduction",
+L5,FLEX,Your investment,Review your premium breakdown,Continue to Review,,"Premium; Salary Deduction","Wallet covers: ₹[X]; You pay: ₹[Y]"
+L6,STANDARD,Review and confirm,Check your selections before submitting,Confirm Enrollment,Edit selections,,You can update during next enrollment window
+L6,PRE-ENROLL,Review and confirm,Check your selections before submitting,Submit Preferences,Edit selections,,You can update during next enrollment window

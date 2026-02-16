@@ -1,0 +1,18 @@
+ID,Component Name,Layers,Priority,Variants,States,Construct Condition,Suggested Figma Frame
+C01,Progress Stepper,ALL,P0,horizontal,"active, completed, upcoming",All constructs,Stepper/Horizontal
+C02,Coverage Card,"L1, L3, L4",P0,view-only,"default, loading, error",All constructs,Card/Coverage
+C03,Plan Selector,L3,P0,"tier-cards (Modular), configurator (Flex)","default, selected, disabled","Modular: tier-cards, Flex: configurator, Vanilla: skip","PlanSelector/TierCards, PlanSelector/Configurator"
+C04,Member Card,"L2, L6",P0,compact,"view, removable",All constructs,Card/Member
+C05,Member Form,L2,P0,add,"collapsed, expanded, error",All constructs,Form/AddMember
+C06,Premium Calculator,"L3, L4, L5",P0,"inline, detailed","calculated, loading, error",All constructs,"Premium/Inline, Premium/Detailed"
+C07,Add-on Card,L4,P1,toggle,"available, selected, disabled, popular",When addOns configured,Card/Addon
+C08,Top-up Card,L4,P1,"standard, modular","available, selected",When topUp configured,Card/TopUp
+C09,Secondary Plan Card,L4,P1,"single, multi-plan","available, selected",When secondary configured,Card/SecondaryPlan
+C10,Wallet Display,"L1, L3, L4, L5",P0-FLEX,"banner, detailed, inline, mini","full, partial, exceeded",Flex only,"Wallet/Banner, Wallet/Detailed, Wallet/Inline, Wallet/Mini"
+C11,Consent Checkbox,L6,P0,"standard, salary-deduction, wallet-overflow","unchecked, checked, error","Standard: all. Salary: employee pays. Wallet: Flex overflow",Checkbox/Consent
+C12,Review Summary,L6,P0,detailed,editable,All constructs,Card/ReviewSummary
+C13,Success Screen,POST,P0,"confirmed, pending-mp, pending-cd, preferences","success, pending",All constructs,Screen/Success
+C14,Tooltip/Info,ALL,P1,popover,"closed, open",All constructs,Tooltip/Popover
+C15,Error Message,ALL,P0,"inline, banner","hidden, visible",All constructs,Message/Error
+C16,Loading State,ALL,P1,"skeleton, spinner",loading,All constructs,State/Loading
+C17,Comparison Table,"L3, L4",P1,side-by-side,interactive,Modular only,Table/Comparison
