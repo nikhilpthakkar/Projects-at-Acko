@@ -15,6 +15,7 @@
 | "Continue to Review" (L5) | Advance to L6 |
 | "Confirm Enrollment" (L6) | Submit and show Success screen |
 | "Submit Preferences" (L6, preEnroll) | Submit and show Success screen |
+| "Update Enrollment" (L6, re-enrollment) | Submit override and show Success screen |
 
 ### Backward Navigation
 
@@ -73,6 +74,7 @@
 | L5 | Continue to Review | purple-600 |
 | L6 | Confirm Enrollment | green-600 |
 | L6 (preEnroll) | Submit Preferences | green-600 |
+| L6 (re-enrollment) | Update Enrollment | green-600 |
 
 ### Secondary CTA
 
@@ -268,3 +270,78 @@ Annotation badge: `absolute -top-2 -right-2 px-1.5 py-0.5 bg-purple-600 text-whi
 | Change policy combination | All selections, all errors, navigation back to L0 |
 | "Start Over" button (Success) | All selections, all errors, submitted flag, navigation to L0 |
 | Navigate back | Errors clear, selections preserved |
+
+---
+
+## 13. Drop-off Recovery Flow (EC-NEW-03)
+
+```
+User attempts to exit (back nav / app close / timeout)
+            |
+            v
+  Is enrollment complete?
+     /            \
+   Yes              No
+   |                |
+   v                v
+ Normal           Show exit modal:
+ exit             "Exit enrollment? Selections won't be saved."
+                       |
+                  [Continue] / [Exit]
+                       |
+                  If Exit:
+                  - Log drop-off point and stage
+                  - Persist draft state
+                  - Trigger recovery comms (email/WhatsApp/push)
+                       |
+                  On re-entry:
+                  - Check for existing draft
+                  - Show modal: "Continue where you left off?"
+                  - [Continue] resumes from saved layer
+                  - [Start Fresh] clears all and begins L0
+```
+
+### Recovery Comms Content
+
+| Channel | Timing | Message |
+|---------|--------|---------|
+| In-app notification | Immediate | "Your enrollment is incomplete. Tap to continue." |
+| Email | 1 hour | "Complete your health coverage enrollment. You were at Step [N]." |
+| WhatsApp | 4 hours | "Hi [Name], your enrollment is pending. Continue here: [deep link]" |
+| Push notification | 24 hours | "Don't forget to complete your health coverage enrollment" |
+
+---
+
+## 14. Re-enrollment Override Flow (EC-NEW-04)
+
+```
+User starts enrollment (already completed before)
+            |
+            v
+  Check for existing completed enrollment
+            |
+            v
+  Show override modal:
+  "You've already enrolled"
+  Current selections summary displayed
+  "New selections will override"
+     /            \
+  [Proceed]       [Cancel]
+   |                |
+   v                v
+ Start L0         Return to
+ (full flow)     previous screen
+   |
+   v
+ Must complete ALL layers
+   |
+   v
+ On submit: Previous enrollment superseded
+```
+
+### Key UX Rules
+
+- User MUST complete the full flow again (cannot partially update)
+- Previous enrollment summary shown before proceeding
+- Success screen shows "Enrollment Updated!" instead of "Enrollment Confirmed!"
+- Previous selections are NOT pre-filled (fresh start)

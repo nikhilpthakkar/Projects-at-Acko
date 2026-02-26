@@ -25,6 +25,15 @@ These are predefined error scenarios per layer.
 | E-L6-01 | L6 | Consent required | Accept terms to proceed | validation | Checkbox border turns cerise, error below |
 | E-L6-02 | L6 | Submission failed | Unable to submit. Please retry. | critical | Error banner, CTA changes to "Retry" |
 | E-L6-03 | L6 | Min participation pending | E-card pending threshold | info | Blue info banner below consents |
+| E-L2-04 | L2 | Dependent selection required | Please select which dependents to cover under this policy | info | Selection UI modal/bottom-sheet (EC-NEW-01) |
+| E-L0-02 | L0 | Incomplete enrollment warning | Complete all steps to confirm your enrollment | info | Full-width banner below welcome card |
+| E-ALL-01 | ALL | Drop-off exit warning | Your selections won't be saved until you complete all steps | warning | Modal dialog on back nav / app close |
+| E-ALL-02 | ALL | Re-enrollment override | New selections will override your current enrollment | warning | Modal dialog with current selections summary |
+| E-L6-04 | L6 | Min participation pending (component) | [Component] selection pending minimum participation | info | Orange-100 banner per component (TopUp/Secondary/Add-ons separately) |
+| E-L2-05 | L2 | Parent inline premium | Parents not covered under base plan. Additional premium: ₹X/year | info | Inline message below parent member card in L2 |
+| E-L4-03 | L4 | Parental coverage pre-selected | Parental coverage added based on L2 family configuration | info | Pre-selected enhancement card in L4 with purple badge |
+| E-L5-03 | L5 | Subsidy display | Subsidized by [Company]: ₹X | info | Subsidy percentage highlighted in premium card |
+| E-L3-04 | L3 | Downgrade warning | Selecting a lower plan reduces your coverage | warning | Warning text below plan cards |
 
 ---
 
@@ -43,6 +52,7 @@ These are triggered by user interaction within the mobile simulator.
 | `errors.consent` | L6 | Submit without terms checked | "Please accept terms and conditions" | C15 inline below checkboxes |
 | `errors.salary` | L6 | Submit without salary consent | "Please consent to salary deduction" | C11 checkbox border cerise + C15 |
 | `errors.wallet` | L6 | Submit without wallet consent | "Please acknowledge wallet overflow" | C11 checkbox border cerise + C15 |
+| `errors.dependentSelection` | L2 | Data shows more dependents than allowed | "Please select which [N] [relation] to cover" | Selection UI (EC-NEW-01) |
 
 ---
 
@@ -67,3 +77,18 @@ These are triggered by user interaction within the mobile simulator.
 | Toggle add-on off/on | Add-on error clears |
 | Check a consent box | Related consent error clears |
 | Config/combo change | All errors reset |
+
+---
+
+## Post-Construct Modifier Errors
+
+These errors are controlled by system flags, not user input. They appear automatically based on policy configuration.
+
+| Modifier | Error ID | Layer | Message | Severity |
+|----------|----------|-------|---------|----------|
+| Min Participation (TopUp) | E-L6-04a | L4, L6, Success | "Top-up selection pending minimum enrollment" | info |
+| Min Participation (Secondary) | E-L6-04b | L4, L6, Success | "Secondary plan pending minimum enrollment" | info |
+| Min Participation (Add-ons) | E-L6-04c | L4, L6, Success | "Add-on selections pending minimum enrollment" | info |
+| Pre-Enrollment | E-L6-05 | L6, Success | "Pre-enrollment: preferences only, not final confirmation" | info |
+| CD Balance Check | E-L5-04 | L5, Success | "CD balance verification in progress" | info |
+| Grade-Based | E-L3-05 | L3 | "Not available for your grade" | blocking |

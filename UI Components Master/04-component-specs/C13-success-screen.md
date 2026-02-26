@@ -22,8 +22,9 @@ Full-screen confirmation after enrollment submission. Shows success state, optio
 |---------|-----------|----------|--------|
 | `confirmed` | No special flags | "Enrollment Confirmed!" | Shown |
 | `pending-cd` | cdCheck = true | "Enrollment Confirmed!" | Hidden |
-| `pending-mp` | minPart = true | "Enrollment Confirmed!" | Hidden |
+| `pending-mp` | minPart_topUp / minPart_secondary / minPart_addOns = true (component-level) | "Enrollment Confirmed!" | Hidden |
 | `preferences` | preEnroll = true | "Preferences Submitted!" | Hidden |
+| `updated` | Re-enrollment (EC-NEW-04) | "Enrollment Updated!" | Shown |
 
 ---
 
@@ -102,3 +103,23 @@ Full-screen confirmation after enrollment submission. Shows success state, optio
 - Centered layout, vertical auto-layout
 - E-card is a nested component (show/hide based on variant)
 - Build 4 variants: confirmed, pending-cd, pending-mp, preferences
+
+---
+
+## New Success Variants (v3)
+
+### Component-Level Min Participation
+
+When min participation applies to individual components (not the whole policy):
+- Show separate status lines per component:
+  - "Top-up: Pending minimum enrollment"
+  - "Secondary: Pending minimum enrollment"  
+  - "Add-ons: Pending minimum enrollment"
+- E-card status shows partial: "Base coverage confirmed. Some selections pending."
+
+### Re-enrollment Updated
+
+- Headline: "Enrollment Updated!"
+- Message: "Your previous enrollment has been superseded with your new selections."
+- E-card: Shown (new enrollment is active)
+- Previous enrollment reference: "Previous enrollment from [date] has been replaced"

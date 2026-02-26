@@ -12,7 +12,7 @@
 
 ## Description
 
-Card offering additional top-up coverage that activates after the base sum insured is exhausted. Has a toggle to opt in/out.
+Card offering additional top-up coverage that activates after the base sum insured is exhausted. Has a toggle to opt in/out. In v3, the Modular variant is renamed from 'modular' to 'tier-upgrade' to clarify it represents paying for a higher tier, not an SI top-up.
 
 ---
 
@@ -21,7 +21,8 @@ Card offering additional top-up coverage that activates after the base sum insur
 | Variant | Context | Description |
 |---------|---------|-------------|
 | `standard` | Vanilla, Flex | Standard top-up with fixed amount |
-| `modular` | Modular | Tier-based top-up |
+| `tier-upgrade` | Modular | Tier-based upgrade (renamed from "Modular Top-up" in v3) |
+| `flex` | Flex | Top-up from wallet balance. Shows "from wallet" note. |
 
 ---
 

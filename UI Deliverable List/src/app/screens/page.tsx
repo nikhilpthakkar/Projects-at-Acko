@@ -30,9 +30,9 @@ const LAYERS = [
   {
     id: "L3", name: "Plan Selection", shortName: "Plans", icon: Settings,
     question: "What level of coverage do I want?", purpose: "Choose/upgrade plan configuration",
-    decisionType: { VANILLA: "Skip", MODULAR: "Decision", FLEX: "Decision" },
-    components: ["C01", "C03", "C06", "C10 (Flex)", "C17 (Modular)"],
-    content: { VANILLA: { headline: "(Skipped)", subtext: "" }, MODULAR: { headline: "Upgrade your plan", subtext: "Choose a higher tier" }, FLEX: { headline: "Configure your coverage", subtext: "Select Sum Insured and family coverage" } },
+    decisionType: { VANILLA: "Skip", MODULAR: "Decision*", FLEX: "Decision*" },
+    components: ["C01", "C03", "C06", "C10 (Flex)", "C17 (Modular Tier Upgrade)"],
+    content: { VANILLA: { headline: "(Skipped)", subtext: "" }, MODULAR: { headline: "Upgrade your plan / View assigned tier", subtext: "Tier Upgrade: choose higher tier | View-only: M01/M07" }, FLEX: { headline: "Configure coverage / View base", subtext: "Base Variable: SI + Family config | Base Fixed: view-only" } },
   },
   {
     id: "L4", name: "Enhancement Options", shortName: "Enhance", icon: Heart,

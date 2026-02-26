@@ -16,7 +16,7 @@ The primary decision component on L3. Has two completely different variants base
 
 ---
 
-## Variant 1: `tier-cards` (MODULAR)
+## Variant 1: `tier-cards` (MODULAR — Tier Upgrade)
 
 ### States
 
@@ -57,6 +57,8 @@ The primary decision component on L3. Has two completely different variants base
 ---
 
 ## Variant 2: `configurator` (FLEX)
+
+> For Base Variable configurations (F01-F05, F11-F15). Base Fixed configurations (F06-F10, F16-F20) show a view-only coverage card instead.
 
 ### States
 
@@ -120,3 +122,30 @@ The primary decision component on L3. Has two completely different variants base
 - Tier cards: vertical auto-layout of 3 card instances, each with boolean "selected" property
 - Configurator: vertical auto-layout with SI button row (horizontal) and radio list (vertical)
 - Both need a premium impact summary below (see C06)
+
+---
+
+## Variant 3: `view-only` (MODULAR M01, M07 / FLEX Base Fixed)
+
+### States
+
+| State | Visual Treatment | Trigger |
+|-------|-----------------|---------|
+| `default` | Assigned plan/tier shown, no selection UI | Config has no upgrade option |
+
+### Anatomy
+
+```
+┌──────────────────────────────────────┐
+│  Your Assigned Plan                  │
+│  Gold - ₹5L Sum Insured             │
+│  [Enhanced coverage] [Wider network] │
+│                                      │
+│  ℹ️ This plan is assigned by your    │
+│     employer and cannot be changed   │
+└──────────────────────────────────────┘
+```
+
+- Used for M01 (view tier only, no upgrade), M07 (view tier + add-ons only), and Base Fixed Flex configs
+- Card style same as tier-cards but without selection border or SELECTED badge
+- Info text: `text-xs text-onyx-500 italic`

@@ -1,0 +1,37 @@
+Edge Case ID,Category,Scenario,Expected Behavior,UI Handling,Backend Handling,Priority
+EC01,Employee,Employee has no dependents but plan covers ESC,"Allow enrollment, prompt to add spouse/children later",Info message about incomplete family,Accept single-member enrollment,P1
+EC02,Employee,Employee adds parent but base plan is ESC only,"Show inline premium in L2, configure coverage in L4 (no redirect loop)","L2: ""Parents not in base - ₹X additional""
+L4: Parental coverage as pre-selected enhancement","Calculate parental premium inline, flag as enhancement",P0
+EC03,Employee,Employee removes dependent mid-flow,"Recalculate premium, update summary","Confirmation dialog, premium update","Soft delete, recalc",P0
+EC04,Family,"Plan allows ESCP, employee adds 2 parents",Allow if plan permits,Show both parents in summary,Validate against max parents config,P1
+EC05,Family,Spouse and children have different coverage (split family),Handle as per plan config,Show split clearly,Backend supports split family,P2
+EC06,Family,Downgrade from ESCP to ESC - parents become ineligible,"Warn user, remove parents from coverage",Warning modal with impact explanation,Flag parents for removal,P0 (Flex)
+EC07,System,Session expires mid-enrollment,Resume from last saved state,"Login redirect, then resume",Draft persistence,P0
+EC08,System,Premium calculation API fails,"Show error, allow retry",Error state with retry button,"Retry logic, fallback to estimate",P0
+EC09,System,E-card generation fails,"Show pending status, retry in background",Pending state with support contact,"Background retry, alert ops",P0
+EC10,System,CD balance insufficient,"Block e-card, inform user","""Policy issuance pending"" message",Flag for HR/employer action,P1
+EC11,MODULAR,User upgrades then downgrades back,"Allow, but warn about losing benefits",Confirmation with benefit loss summary,Track final selection only,P1
+EC12,MODULAR,No tiers available (only base),"Hide tier selection, proceed as Vanilla",Skip L3 Plan Selection,Handle as fixed base,P1
+EC13,MODULAR,Grade restricts available tiers,Show only eligible tiers,Filter tier list by grade,Grade-based plan filtering,P1
+EC14,FLEX,Wallet exactly equals selections (no overflow),"Normal flow, zero employee payment","""Fully covered by wallet"" message",employeePayable = 0,P0 (Flex)
+EC15,FLEX,Wallet insufficient for base plan minimum,Require employee top-up,Clear shortfall amount,Calculate minimum required,P0 (Flex)
+EC16,FLEX,User tries to spend wallet on restricted items,Block or warn based on config,Disabled options or warning,Wallet usage rules check,P1 (Flex)
+EC17,FLEX,Downgrade creates wallet surplus non-refundable,"Inform user, suggest add-ons","""Use remaining wallet for add-ons""",Wallet balance tracking,P1 (Flex)
+EC18,Plan Rules,Add-on eligibility depends on base SI,Show/hide add-ons based on current SI selection,Dynamic add-on visibility,Eligibility rules in config,P0
+EC19,Plan Rules,OPD add-on only if SI > 7L,Hide OPD if SI <= 7L,Conditional add-on display,Rule: addon.eligibility.minSI,P1
+EC20,Plan Rules,Secondary plan has different waiting period,Show waiting period info,Waiting period in plan details,Part of plan metadata,P2
+EC21,Min Participation,"Plan under MP, enrollment ongoing","Collect selection, defer e-card","""E-card pending rollout decision""",Rollout_Status = IN_ENROLLMENT,P1
+EC22,Min Participation,"MP not met, plan not rolled out",Move user to alternate or base,Communication about plan change,Migrate to fallback plan,P1
+EC23,Min Participation,"MP met, plan rolled out",Generate e-cards for all opted employees,Success notification,Batch e-card generation,P1
+EC24,Pre-Enrollment,Pre-enrollment phase active,"Collect preferences, no policy creation","""Your preferences are recorded""",Store in pre-policy entity,P2
+EC25,Mid-Year,"Employee joins mid-year, MP already decided",Direct enrollment to rolled-out plans only,Show only available plans,Filter by Rollout_Status,P1
+EC26,Mid-Year,"Policy issued mid-year, different start date",Handle coverage start date correctly,Show coverage start date,Policy start date tracking,P2
+EC27,Exception Plan,Employee on exception plan,"Skip enrollment, show e-cards directly",Direct to e-card view,Flag: exceptionPlan = true,P1
+EC28,Multiple Packages,Employee enrolled in multiple packages,Separate enrollment per package,Package selector or sequential flow,Independent enrollment contexts,P2
+EC-NEW-01,Data Mismatch,"Previous policy had more dependents than current allows (e.g., 2 children → 1 child)",Prompt user to select which dependent to cover,"Selection UI: ""Select which child to cover""
+Clear policy limit messaging","Validate config, store selection",P0
+EC-NEW-02,Incomplete Flow,User must complete ALL layers for enrollment to register,"Set expectation at L0, prevent partial submit","L0: ""Complete all steps to confirm""
+Exit: ""Selections won't be saved""",Persist only on completion,P0
+EC-NEW-03,Drop-off,"User exits mid-flow (back nav, app close, timeout)","Log drop-off, trigger recovery comms","Modal on exit, Email/WhatsApp/Push recovery","Log stage, trigger comms, maintain draft",P0
+EC-NEW-04,Re-enrollment,"User completed enrollment, starts again","Warn about override, require full completion","Modal: ""New selections will override""
+Show current summary","Track version, supersede on completion",P1

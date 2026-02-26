@@ -62,6 +62,16 @@ export function PreviewC02({ state }: { state: string }) {
 
 /* ── C03: Plan Selector ────────────────────────── */
 export function PreviewC03({ variant, state }: { variant: string; state: string }) {
+  if (variant === "view-only") {
+    return (
+      <div className="border border-onyx-300 rounded-xl p-4 bg-white" style={{ maxWidth: 375 }}>
+        <div className="text-sm font-semibold text-onyx-800 mb-1">Your Assigned Plan</div>
+        <div className="text-xs text-onyx-500 mb-3">Gold — ₹5L Sum Insured</div>
+        <div className="flex flex-wrap gap-1">{["Enhanced coverage", "Wider network", "Room rent waiver"].map((f, j) => <span key={j} className="text-[10px] px-2 py-0.5 bg-onyx-100 text-onyx-600 rounded-full">{f}</span>)}</div>
+        <div className="mt-3 text-xs text-onyx-400 italic flex items-center gap-1"><Info size={12} />This plan is assigned by your employer and cannot be changed</div>
+      </div>
+    );
+  }
   if (variant === "tier-cards") {
     const tiers = [{ name: "Silver", si: "₹3L", price: "Included", priceColor: "text-green-700" }, { name: "Gold", si: "₹5L", price: "+₹500/mo", priceColor: "text-orange-700" }, { name: "Platinum", si: "₹10L", price: "+₹1,200/mo", priceColor: "text-orange-700" }];
     const selectedIdx = state === "selected" ? 1 : -1;
@@ -165,10 +175,16 @@ export function PreviewC07({ state }: { state: string }) {
 }
 
 /* ── C08: Top-up Card ────────────────────────── */
-export function PreviewC08({ state }: { state: string }) {
+export function PreviewC08({ variant, state }: { variant: string; state: string }) {
+  const labels: Record<string, { title: string; desc: string; badge?: string }> = {
+    standard: { title: "Top-up Cover", desc: "Extra ₹5L after base exhausted" },
+    "tier-upgrade": { title: "Tier Upgrade", desc: "Upgrade to a higher coverage tier", badge: "MODULAR" },
+    flex: { title: "Top-up Cover", desc: "Extra ₹5L from wallet", badge: "FLEX" },
+  };
+  const info = labels[variant] || labels.standard;
   return (
     <div className="border border-onyx-300 rounded-xl p-4 bg-white" style={{ maxWidth: 375 }}>
-      <div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center"><Shield size={18} className="text-blue-700" /></div><div><div className="font-semibold text-sm">Top-up Cover</div><div className="text-xs text-onyx-500">Extra ₹5L after base exhausted</div></div></div><div className="text-sm font-bold">₹4,800/yr</div></div>
+      <div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center"><Shield size={18} className="text-blue-700" /></div><div><div className="flex items-center gap-2"><span className="font-semibold text-sm">{info.title}</span>{info.badge && <span className="px-1.5 py-0.5 bg-purple-200 text-purple-700 text-[9px] font-bold rounded">{info.badge}</span>}</div><div className="text-xs text-onyx-500">{info.desc}</div></div></div><div className="text-sm font-bold">₹4,800/yr</div></div>
       <div className="mt-3 flex items-center justify-between"><span className="text-xs text-onyx-600">{state === "selected" ? "Added" : "Add to coverage"}</span><Toggle on={state === "selected"} /></div>
     </div>
   );
@@ -224,8 +240,8 @@ export function PreviewC12() {
 
 /* ── C13: Success Screen ────────────────────────── */
 export function PreviewC13({ variant }: { variant: string }) {
-  const headlines: Record<string, string> = { confirmed: "Enrollment Confirmed!", "pending-mp": "Enrollment Confirmed!", "pending-cd": "Enrollment Confirmed!", preferences: "Preferences Submitted!" };
-  const messages: Record<string, string> = { confirmed: "Your e-card has been generated successfully!", "pending-mp": "E-card will be generated once minimum participation is met.", "pending-cd": "CD balance check in progress. E-card will be generated shortly.", preferences: "Your preferences have been recorded." };
+  const headlines: Record<string, string> = { confirmed: "Enrollment Confirmed!", "pending-mp": "Enrollment Confirmed!", "pending-cd": "Enrollment Confirmed!", preferences: "Preferences Submitted!", "re-enrollment": "Selections Updated!" };
+  const messages: Record<string, string> = { confirmed: "Your e-card has been generated successfully!", "pending-mp": "Some selections pending minimum participation at component level.", "pending-cd": "CD balance check in progress. E-card will be generated shortly.", preferences: "Your preferences have been recorded for the upcoming policy period.", "re-enrollment": "Your new selections have overridden your previous enrollment. Complete all steps to confirm." };
   return (
     <div className="text-center space-y-4 bg-white rounded-xl p-6" style={{ maxWidth: 375 }}>
       <div className="w-20 h-20 rounded-full bg-green-200 flex items-center justify-center mx-auto"><CheckCircle2 size={40} className="text-green-700" /></div>

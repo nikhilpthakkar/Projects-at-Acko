@@ -39,8 +39,10 @@
 | Construct | Headline | Subtext | Primary CTA | Secondary CTA | Tooltips | Anxiety Reducers |
 |-----------|----------|---------|-------------|---------------|----------|------------------|
 | VANILLA | *(L3 skipped)* | -- | -- | -- | -- | -- |
-| MODULAR | Upgrade your plan | Choose a higher tier | Continue | -- | Tier, Sum Insured | Compare plans side-by-side |
-| FLEX | Configure your coverage | Select Sum Insured and family coverage | Continue | -- | Tier, Sum Insured | Compare plans side-by-side |
+| MODULAR | Upgrade your plan | Choose a higher tier for better benefits | Continue | -- | Tier, Sum Insured | Compare plans side-by-side |
+| MODULAR (view-only: M01, M07) | Your assigned plan | Review your coverage details | Continue | -- | Tier, Sum Insured | -- |
+| FLEX (Base Variable) | Configure your coverage | Select Sum Insured and family coverage | Continue | -- | Tier, Sum Insured | Compare plans side-by-side |
+| FLEX (Base Fixed) | Your base coverage | Your fixed coverage from [Company] | Continue | -- | Sum Insured | Use your wallet for enhancements |
 
 ---
 
@@ -50,6 +52,7 @@
 |-----------|----------|---------|-------------|---------------|----------|------------------|
 | Employer-paid enhancements | Enhance your coverage | Additional benefits included | Continue | Skip enhancements | Top-up, Secondary, Add-on | Most popular choices highlighted |
 | Employee-paid enhancements | Enhance your coverage | Add more protection (employee-paid) | Continue | Skip enhancements | Top-up, Secondary, Add-on | Most popular choices highlighted |
+| Min Participation components | Enhance your coverage | Add more protection (subject to enrollment) | Continue | Skip enhancements | Top-up, Secondary, Add-on | "Subject to minimum [X]% enrollment" badge per component |
 
 ---
 
@@ -68,6 +71,7 @@
 |-----------|----------|---------|-------------|---------------|----------|------------------|
 | Standard | Review and confirm | Check your selections before submitting | Confirm Enrollment | Edit selections | -- | You can update during next enrollment window |
 | Pre-enrollment | Review and confirm | Check your selections before submitting | Submit Preferences | Edit selections | -- | You can update during next enrollment window |
+| Re-enrollment | Review and confirm | You are updating your previous enrollment | Update Enrollment | Edit selections | -- | Previous enrollment will be superseded |
 
 ---
 
@@ -126,3 +130,54 @@ Used in L0 subtext construction:
 | L5 (Flex) | Wallet covers: ₹[X] | CheckCircle2 (green) |
 | L5 (Flex) | You pay: ₹[Y] | CheckCircle2 (green) |
 | L6 | You can update during next enrollment window | CheckCircle2 (green) |
+
+---
+
+## Post-Construct Modifier Content
+
+Content variations triggered by system flags (not construct type).
+
+### Min Participation (per component)
+
+| Layer | Element | Copy |
+|-------|---------|------|
+| L4 | Badge below component card | "Subject to minimum [X]% enrollment" |
+| L6 | Banner per component | "[Component] selection pending minimum participation" |
+| Success | Status per component | "E-card pending — [component] awaiting minimum enrollment" |
+
+### Pre-Enrollment
+
+| Layer | Element | Copy |
+|-------|---------|------|
+| L0 | Subtext addition | "This is a pre-enrollment window — your preferences will be recorded" |
+| L6 | CTA | "Submit Preferences" (replaces "Confirm Enrollment") |
+| L6 | Banner | "Pre-enrollment: preferences only, not final confirmation" |
+| Success | Headline | "Preferences Submitted!" |
+| Success | Message | "Your selections have been recorded for the upcoming policy period" |
+
+### CD Balance Check
+
+| Layer | Element | Copy |
+|-------|---------|------|
+| L5 | Info text | "Verifying CD balance..." |
+| Success | Message | "CD balance check in progress — e-card will be generated once verified" |
+
+### Grade-Based
+
+| Layer | Element | Copy |
+|-------|---------|------|
+| L1 | Badge | "Plans for Grade [X]" |
+| L3 | Disabled tier label | "Not available for your grade" |
+
+### New Edge Case Content
+
+| EC ID | Layer | Element | Copy |
+|-------|-------|---------|------|
+| EC-NEW-01 | L2 | Selection prompt | "Please select which [N] [relation] to cover. Your policy covers [limit]." |
+| EC-NEW-02 | L0 | Banner | "Complete all steps to confirm your enrollment" |
+| EC-NEW-02 | ALL (exit) | Modal | "Exit enrollment? Your selections won't be saved." |
+| EC-NEW-03 | ALL (re-entry) | Modal | "Continue where you left off?" with previous stage summary |
+| EC-NEW-03 | Comms | Email/WhatsApp | "Your enrollment is incomplete. Continue where you left off." |
+| EC-NEW-04 | ALL (restart) | Modal | "You've already enrolled. New selections will override your current enrollment." |
+| EC02 | L2 | Inline message | "Parents not covered under base plan. Additional premium: ₹X/year" |
+| EC02 | L4 | Pre-selected badge | "Added in Family step" on parental coverage card |

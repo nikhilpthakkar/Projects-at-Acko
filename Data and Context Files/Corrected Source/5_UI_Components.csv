@@ -1,0 +1,97 @@
+Component ID,Component Name,Purpose,Used In Layers,Key Features,Variants,States,Props/Inputs,Content Slots,Cross-References,Priority
+C01,Progress Stepper,Shows user where they are in the flow and how many steps remain. Reduces anxiety by setting expectations.,All layers (persistent),"• Step labels with numbers
+• Completed step checkmarks
+• Current step highlight
+• Time estimate badge","Horizontal (mobile), Vertical (desktop)","Active, Completed, Upcoming, Disabled","steps[], currentStep, completedSteps[], timeEstimate","Step labels, Time estimate text","Uses: None
+Used by: All layers",P0
+C02,Coverage Card,Displays plan/coverage information in a scannable format. Core component for showing what user gets.,"L1, L3, L4","• Plan name header
+• SI badge
+• Key benefits list (4-5 items)
+• Price display
+• Family covered indicator","View-only, Selectable, Comparison, Compact","Default, Selected, Disabled, Loading","plan, isSelected, onSelect, showPrice, isCompact","Plan name, SI amount, Benefits list, Price, Family badge","Uses: C14 Tooltip
+Used by: C03 Plan Selector, C17 Comparison Table",P0
+C03,Plan Selector,Enables user to choose between multiple plan options. Critical for Modular tier selection and Flex configuration.,L3,"• Multiple plan cards
+• Visual comparison
+• Price delta display
+• Selection indicator
+• Recommendation badge","Tier cards (M), SI dropdown (F), Family picker (F), Radio group","Default, Selected, Unavailable, Recommended","plans[], selectedPlan, onChange, walletBalance, recommendations","Plan names, Prices, Comparison highlights, Recommendation text","Uses: C02 Coverage Card, C06 Premium Calculator
+Used by: L3 layer",P0
+C04,Member Card,Shows individual family member information. Used in family configuration and review screens.,"L2, L6","• Member photo/avatar
+• Name and relationship
+• DOB display
+• Edit/Delete actions
+• Coverage status","Compact, Expanded, Editable","View, Edit-mode, Adding, Error","member, onEdit, onDelete, allowEdit, showCoverage","Name, Relationship label, DOB format, Action labels","Uses: C05 Member Form (on edit)
+Used by: L2 layer, C12 Review Summary",P0
+C05,Member Form,Captures family member details. Used when adding or editing dependents.,L2 (modal/bottom-sheet),"• Name input
+• Relationship dropdown
+• DOB picker
+• Gender selector
+• Validation messages","Add new, Edit existing","Empty, Filled, Error, Submitting, Success","member, onSubmit, onCancel, allowedRelationships[], validationRules","Field labels, Placeholder text, Validation messages, Submit/Cancel buttons","Uses: None
+Used by: C04 Member Card",P0
+C06,Premium Calculator,Shows real-time premium calculation as user makes selections. Critical for decision-making.,"L3, L4, L5","• Line item breakdown
+• Employer vs Employee split
+• Running total
+• Wallet deduction (Flex)
+• Monthly/Annual toggle","Simple (one line), Detailed (breakdown), Wallet-aware","Loading, Calculated, Error, Zero-premium","selections[], walletBalance, showSplit, frequency","Line item labels, Split labels, Total label, Frequency labels","Uses: None
+Used by: C03 Plan Selector, C07 Add-on Card, C08 Top-up Card",P0
+C07,Add-on Card,Displays individual add-on with toggle for selection. Used in enhancement layer.,L4,"• Add-on name
+• Benefit description
+• Price display
+• Toggle/checkbox
+• ""Popular"" badge","Toggle (single), Selection (exclusive), Info-only","Available, Selected, Disabled, Recommended","addon, isSelected, onToggle, price, isPopular","Name, Description, Price, Popular badge text","Uses: C06 Premium Calculator, C14 Tooltip
+Used by: L4 layer",P1
+C08,Top-up Card,Shows top-up coverage option with selection capability. Similar to Coverage Card but specific to top-ups.,L4,"• Top-up name/tier
+• Coverage boost amount
+• Price display
+• Selection control
+• ""Covers who"" indicator","Standard, Modular (as tier), Consolidated","Available, Selected, Disabled","topup, isSelected, onSelect, showFamily","Name, Coverage boost text, Price, Family coverage text","Uses: C06 Premium Calculator
+Used by: L4 layer, C17 Comparison Table",P1
+C09,Secondary Plan Card,"Displays secondary plan (e.g., parental) with SI selection. Handles multiple SI variant display.",L4,"• Plan name
+• Who it covers
+• SI options (if multiple)
+• Price per SI
+• Selection control","Single SI, Multi-SI dropdown, Multi-plan comparison","Available, Selected, Disabled, SI-selecting","secondaryPlan, selectedSI, siOptions[], onSelect, onSIChange","Plan name, Family covered text, SI labels, Price labels","Uses: C06 Premium Calculator
+Used by: L4 layer",P1
+C10,Wallet Display,Shows wallet balance and usage for Flex policies. Critical for Flex user decision-making.,"L1, L3, L4, L5 (Flex only)","• Total wallet amount
+• Used amount
+• Remaining balance
+• Usage progress bar
+• Overflow warning","Banner (prominent), Inline (compact), Detailed (breakdown)","Full, Partial, Empty, Exceeded, Loading","totalWallet, usedWallet, remainingWallet, showBreakdown","Amount labels, Status text, Overflow warning text","Uses: None
+Used by: C03 Plan Selector, C07 Add-on Card (Flex)",P0 (Flex)
+C11,Consent Checkbox,Captures user agreement to terms. Required for enrollment submission.,L6,"• Checkbox control
+• Consent text
+• Link to full terms
+• Error state for unchecked","Standard terms, Wallet overflow consent, Payment consent","Unchecked, Checked, Error, Disabled","label, isChecked, onChange, isRequired, termsUrl","Consent text, Learn more link text, Error message","Uses: None
+Used by: L6 layer",P0
+C12,Review Summary,Displays final summary of all selections before submission. Allows editing.,L6,"• Collapsible sections
+• Coverage summary
+• Family list
+• Cost breakdown
+• Edit links per section","Compact (one-page), Detailed (expandable)","Editable, Read-only, Submitting","selections, familyMembers, premiumBreakdown, onEdit","Section headers, Summary text, Edit link text","Uses: C04 Member Card, C06 Premium Calculator
+Used by: L6 layer",P0
+C13,Success Screen,Shows enrollment completion status. Handles various post-submission states.,Post-L6,"• Status icon/animation
+• Success message
+• E-card preview/link
+• Next steps list
+• Support contact","Instant e-card, Pending (min participation), Pending (CD), Error","Success, Pending, Error, Loading","status, eCardUrl, nextSteps[], supportContact","Status message variants, Next steps text, Support text","Uses: None
+Used by: Post-submission flow",P0
+C14,Tooltip/Info,Provides contextual help for insurance jargon and complex concepts. Reduces confusion.,All layers,"• Trigger element (? icon)
+• Popup content
+• Examples/illustrations
+• Learn more link","Inline (hover/tap), Popover, Bottom sheet (mobile)","Closed, Open, Loading","term, definition, examples[], learnMoreUrl","Term, Definition text, Example text, Learn more text","Uses: None
+Used by: C02, C07, C08, C09, C10",P1
+C15,Error Message,Displays validation errors and system errors. Guides user to resolution.,All layers,"• Error icon
+• Error message
+• Resolution hint
+• Retry action (if applicable)","Inline (field-level), Toast, Banner, Full-screen","Warning, Error, Info","message, type, action, onAction","Error text, Resolution hint, Action button text","Uses: None
+Used by: C05 Member Form, C11 Consent, all forms",P0
+C16,Loading State,Shows loading/processing feedback. Prevents user confusion during async operations.,All layers,"• Loading indicator
+• Progress message
+• Skeleton screens (optional)","Full screen (blocking), Inline, Skeleton","Loading, Loaded, Timeout","isLoading, message, showSkeleton",Loading message text,"Uses: None
+Used by: All async operations",P1
+C17,Comparison Table,Side-by-side comparison of multiple plans/tiers. Helps decision-making for upgrades.,"L3, L4 (modal)","• Plan headers
+• Feature rows
+• Highlight differences
+• Select buttons
+• Sticky headers","Side-by-side, Stacked (mobile)","Interactive, View-only, Highlighting-differences","plans[], features[], selectedPlan, onSelect, highlightDiffs","Plan names, Feature labels, Difference highlights, Select button text","Uses: C02 Coverage Card, C08 Top-up Card
+Used by: L3 layer, L4 modals",P1

@@ -6,12 +6,21 @@ L1,VANILLA,Your coverage from [Company],₹5 lakh coverage for your family,Conti
 L1,MODULAR,Your coverage from [Company],₹5 lakh coverage for your family,Continue,,"Sum Insured; Floater; Cashless",
 L1,FLEX,Your benefits wallet,₹25000 to build your protection,Continue,,"Sum Insured; Floater; Cashless",
 L2,ALL,Your covered family members,Review and update if needed,Continue,+ Add family member,"Dependent; Relationship",
-L3,VANILLA,(Layer skipped),,,,,,
-L3,MODULAR,Upgrade your plan,Choose a higher tier,Continue,,"Tier; Sum Insured",Compare plans side-by-side
-L3,FLEX,Configure your coverage,Select Sum Insured and family coverage,Continue,,"Tier; Sum Insured",Compare plans side-by-side
+L3,VANILLA,(Layer skipped),,,,,
+L3,MODULAR (Tier Upgrade),Upgrade your plan,Choose a higher tier for better benefits,Continue,,"Tier; Sum Insured",Compare plans side-by-side
+L3,MODULAR (view-only: M01/M07),Your assigned plan,Review your coverage details,Continue,,"Tier; Sum Insured",
+L3,FLEX (Base Variable),Configure your coverage,Select Sum Insured and family coverage,Continue,,"Tier; Sum Insured",Compare plans side-by-side
+L3,FLEX (Base Fixed),Your base coverage,Your fixed coverage from [Company],Continue,,"Sum Insured",Use your wallet for enhancements
 L4,EMPLOYER-PAID,Enhance your coverage,Additional benefits included,Continue,Skip enhancements,"Top-up; Secondary; Add-on",Most popular choices highlighted
 L4,EMPLOYEE-PAID,Enhance your coverage,Add more protection (employee-paid),Continue,Skip enhancements,"Top-up; Secondary; Add-on",Most popular choices highlighted
+L4,MIN-PART COMPONENTS,Enhance your coverage,Add more protection (subject to enrollment),Continue,Skip enhancements,"Top-up; Secondary; Add-on","Subject to minimum [X]% enrollment badge per component"
 L5,VANILLA/MODULAR,Your investment,Review your premium breakdown,Continue to Review,,"Premium; Salary Deduction",
 L5,FLEX,Your investment,Review your premium breakdown,Continue to Review,,"Premium; Salary Deduction","Wallet covers: ₹[X]; You pay: ₹[Y]"
 L6,STANDARD,Review and confirm,Check your selections before submitting,Confirm Enrollment,Edit selections,,You can update during next enrollment window
 L6,PRE-ENROLL,Review and confirm,Check your selections before submitting,Submit Preferences,Edit selections,,You can update during next enrollment window
+L6,RE-ENROLLMENT,Review and confirm,You are updating your previous enrollment,Update Enrollment,Edit selections,,Previous enrollment will be superseded
+SUCCESS,DEFAULT,Enrollment Confirmed!,Your e-card has been generated successfully!,,,,
+SUCCESS,PRE-ENROLL,Preferences Submitted!,Your selections have been recorded for the upcoming policy period,,,,
+SUCCESS,MIN-PART (component),Enrollment Confirmed!,[Component] pending minimum participation,,,,
+SUCCESS,CD-CHECK,Enrollment Confirmed!,CD balance check in progress — e-card will be generated once verified,,,,
+SUCCESS,RE-ENROLLMENT,Enrollment Updated!,Your previous enrollment has been superseded with your new selections,,,,

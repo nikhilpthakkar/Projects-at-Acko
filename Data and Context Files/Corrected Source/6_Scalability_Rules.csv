@@ -1,0 +1,31 @@
+Rule ID,Category,Rule Name,Description,Implementation Notes,Priority
+R01,Layer Visibility,Skip Empty Layers,"If a layer has no applicable content, skip it entirely",FlowEngine checks config before rendering,P0
+R02,Layer Visibility,Conditional L3,Only show Plan Selection if Modular or Flex,constructType check,P0
+R03,Layer Visibility,Conditional L4,Only show Enhancements if any optional components exist,"Check topUp, secondary, addOns in config",P0
+R04,Layer Visibility,Conditional L5,Only show Payment if employee payment required,Check if any employeePaid components,P0
+R05,Decision Reduction,Auto-skip View-only,"If all items in a layer are view-only, show but don't require action",Mark layer as informational,P1
+R06,Decision Reduction,Smart Defaults,Pre-select most common option if data available,Use employer config or popularity data,P2
+R07,Decision Reduction,Progressive Disclosure,Show details only on demand,"Collapsed cards, ""Learn more"" links",P1
+R08,Content Adaptation,Dynamic Headlines,Change headlines based on construct type,Content lookup by constructType,P0
+R09,Content Adaptation,Payment Context,Adjust copy based on who pays,employer-paid vs employee-paid variants,P0
+R10,Content Adaptation,Wallet Awareness,Show wallet impact throughout Flex flows,Wallet component in multiple layers,P0 (Flex)
+R11,Premium Logic,Real-time Calculation,Update premium on every selection change,Debounced API calls or local calc,P0
+R12,Premium Logic,Wallet Deduction,"For Flex, show wallet usage and remaining",walletUsed = sum of all selections,P0 (Flex)
+R13,Premium Logic,Overflow Handling,"If selections exceed wallet, show employee payable",overflow = totalPremium - walletBalance,P0 (Flex)
+R14,Validation,Family Rules,Validate family selection against plan rules,Plan config defines allowed relationships,P0
+R15,Validation,Plan Eligibility,Check plan eligibility based on base selection,Plan dependency rules from config,P1
+R16,Validation,Grade Eligibility,Filter plans based on employee grade,Grade mapping from backend,P1
+R17,System Flags,Min Participation,"If flag set, block e-card until rollout decision","E-card status = ""Pending""",P1
+R18,System Flags,Pre-Enrollment,"If flag set, collect data without policy creation",Different submit endpoint,P2
+R19,System Flags,CD Balance Check,"If flag set, verify CD balance before e-card","E-card status = ""Pending CD""",P1
+R20,System Flags,Grade-Based Plans,"If flag set, filter plans by employee grade",Grade filter in plan queries,P1
+R21,Performance,Lazy Load Layers,Only load layer data when reached,"API calls per layer, not upfront",P2
+R22,Performance,Cache Calculations,Cache premium calculations for same selections,Local storage or memory cache,P2
+R23,State Management,Draft Persistence,Save draft on every change for resume,Auto-save to backend every N seconds,P1
+R24,State Management,Enrollment State,Track NotStarted/InProgress/Completed,State in employee-package record,P0
+R25,Error Handling,Graceful Degradation,"If optional component fails, continue flow",Try-catch around each component load,P1
+R26,Error Handling,Clear Error Messages,User-friendly errors with recovery actions,Error message components with CTAs,P0
+R27,Accessibility,Keyboard Navigation,All interactions must be keyboard-accessible,"Focus management, tab order",P1
+R28,Accessibility,Screen Reader Support,All content must be screen reader compatible,"ARIA labels, semantic HTML",P1
+R29,Analytics,Step Tracking,Track completion of each layer,Analytics events per layer transition,P1
+R30,Analytics,Drop-off Tracking,Track where users drop off,Exit events with last completed step,P0

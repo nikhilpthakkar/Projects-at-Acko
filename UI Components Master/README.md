@@ -20,9 +20,9 @@
 | Components | 17 (C01--C17) |
 | Layers/Screens | 8 (L0--L6 + Success) |
 | Constructs | 3 (Vanilla, Modular, Flex) |
-| Policy Combinations | 52 |
-| Error Definitions | 21 |
-| Edge Cases | 17 |
+| Policy Combinations | 51 |
+| Error Definitions | 24 |
+| Edge Cases | 32 |
 
 ---
 
@@ -57,5 +57,22 @@ When you update a component in Figma, the corresponding code changes go into the
 | Construct | Base Model | Plan Selection | Payment | Key Difference |
 |-----------|-----------|----------------|---------|----------------|
 | **VANILLA** | Fixed SI | No selection (skip L3) | Employer or Employee | Simplest flow, fewest decisions |
-| **MODULAR** | Tiered plans | Choose Silver/Gold/Platinum | Employer + Employee upgrade | Tier-based selection with price delta |
-| **FLEX** | Wallet-based | Configure SI + Family | Wallet with overflow | Most complex: wallet meter, real-time budget tracking |
+| **MODULAR** | Tiered plans | Tier Upgrade (pay for higher tier) | Employer base + Employee upgrade | Tier-based selection with price delta |
+| **FLEX** | Base Variable or Base Fixed | Base Variable: configure SI + Family; Base Fixed: view base, wallet for enhancements | Wallet (with potential employee overflow) | Most complex: wallet meter, real-time budget tracking |
+
+---
+
+## Post-Construct Modifiers
+
+These flags modify behavior of any combination without creating new combo IDs:
+
+| Modifier | Applies To | UI Impact |
+|----------|-----------|-----------|
+| Min Participation (TopUp) | Top-up component | Pending badge on selection card |
+| Min Participation (Secondary) | Secondary component | Pending badge on selection card |
+| Min Participation (Add-ons) | Add-ons component | Pending badge on selection card |
+| Pre-Enrollment | Entire flow | CTA changes to "Submit Preferences" |
+| CD Balance Check | Payment verification | Loading/verification state |
+| Grade-Based | Plan filtering | Non-eligible plans greyed out |
+
+Note: Min Participation is tracked at component level, NOT policy level. Base plan never has min participation.

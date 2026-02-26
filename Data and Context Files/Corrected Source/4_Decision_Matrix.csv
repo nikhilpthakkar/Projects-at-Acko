@@ -1,0 +1,51 @@
+Construct,Scenario,L0,L1,L2,L3,L4,L5,L6,Total Decisions
+LEGEND:,V = View only,D = Decision required,S = Skip (N/A),C = Conditional,,,,,
+VANILLA,V01: Base only (employer-paid),V,V,V,S,S,S,D,1.0
+VANILLA,V02: Base + Top-up (all employer),V,V,V,S,V,S,D,1.0
+VANILLA,V03: Base + Top-up (employee-paid),V,V,C,S,D,D,D,3.0
+VANILLA,V04: Base + Secondary (employer),V,V,V,S,V,S,D,1.0
+VANILLA,V05: Base + Secondary (employee),V,V,C,S,D,D,D,3.0
+VANILLA,V06: Base + Top-up + Secondary,V,V,D,S,D,D,D,4.0
+VANILLA,V07: Full stack with Sec Top-up,V,V,D,S,D,D,D,4.0
+VANILLA,V08: Base + Add-ons (employer),V,V,V,S,V,S,D,1.0
+VANILLA,V09: Base + Add-ons (employee),V,V,C,S,D,D,D,3.0
+VANILLA,V10: Top-up + Add-ons,V,V,C,S,D,D,D,3.0
+VANILLA,V11: Full voluntary stack,V,V,D,S,D,D,D,4.0
+VANILLA,V12: Maximum config,V,V,D,S,D,D,D,4.0
+VANILLA,V13-V14: Consolidated top-up,V,V,D,S,D,D,D,4.0
+VANILLA,V15: Partial base payment,V,V,D,S,D,D,D,4.0
+VANILLA,V16: All employer-paid,V,V,V,S,V,S,D,1.0
+VANILLA,V17-V18: SI variants,V,V,D,S,D,D,D,4.0
+VANILLA,V19: Subsidized options,V,V,C,S,D,D,D,3.0
+VANILLA,V20: Pre-enrollment,V,V,D,S,D,S,D,3.0
+MODULAR,M01: View tiers only,V,V,V,V,S,S,D,1.0
+MODULAR,M02: Tier upgrade,V,V,C,D,S,D,D,3.0
+MODULAR,M03: Tier + Add-ons,V,V,C,D,D,D,D,4.0
+MODULAR,M04: Tier + Secondary,V,V,D,D,D,D,D,5.0
+MODULAR,M05: Full modular,V,V,D,D,D,D,D,5.0
+MODULAR,M06: Maximum modular,V,V,D,D,D,D,D,5.0
+MODULAR,M07: Tier + Add-ons only,V,V,C,D,D,D,D,4.0
+MODULAR,M08: Partial employer,V,V,D,D,S,D,D,4.0
+MODULAR,M09: Min participation,V,V,V,D,S,S,V,1.0
+MODULAR,M10: Pre-enrollment,V,V,D,D,D,S,D,4.0
+MODULAR,M11: Grade-based tiers,V,V,C,D,S,D,D,3.0
+FLEX,F01: Basic wallet,V,V,V,S,S,S,D,1.0
+FLEX,F02: Wallet + Add-ons,V,V,C,S,D,C,D,2.0
+FLEX,F03: SI selection,V,V,C,D,S,C,D,2.0
+FLEX,F04: Family definition,V,V,D,D,S,C,D,3.0
+FLEX,F05: SI + Family config,V,V,D,D,S,C,D,3.0
+FLEX,F06: Wallet + Top-up,V,V,C,D,D,D,D,4.0
+FLEX,F07: Wallet + Secondary,V,V,D,D,D,D,D,5.0
+FLEX,F08: Wallet + Both,V,V,D,D,D,D,D,5.0
+FLEX,F09: Full flex,V,V,D,D,D,D,D,5.0
+FLEX,F10: Maximum flex,V,V,D,D,D,D,D,5.0
+FLEX,F11: Custom wallet,V,V,C,S,D,C,D,2.0
+FLEX,F12: Upgrade beyond wallet,V,V,C,D,S,D,D,3.0
+FLEX,F13: Downgrade + realloc,V,V,C,D,D,C,D,3.0
+FLEX,F14: Cover variants,V,V,C,D,S,C,D,2.0
+FLEX,F15: Multi secondary,V,V,D,D,D,D,D,5.0
+FLEX,F16: Consolidated,V,V,D,D,D,D,D,5.0
+FLEX,F17: Min participation,V,V,V,S,D,S,V,1.0
+FLEX,F18: Pre-enrollment,V,V,D,D,D,S,D,4.0
+FLEX,F19: Grade-based wallet,V,V,C,S,D,C,D,2.0
+FLEX,F20: Wellness wallet,V,V,V,S,D,S,D,2.0

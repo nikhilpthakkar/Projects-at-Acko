@@ -1,0 +1,548 @@
+Combo ID,Construct,Primary JTBD,Secondary JTBDs,Anxiety Points,Key Decisions,Education Moments,Flow Layers Shown,Content Designer Input
+V01,VANILLA,"When I start a new job, I want to understand my health coverage, so I can feel secure about my family's protection","• Know who is covered under my policy
+• Understand what medical expenses are covered
+• Get my e-card quickly to use at hospitals","• Is this coverage enough for my family?
+• What happens if I need expensive treatment?
+• Are my parents covered?",None (view-only flow),"• What is Sum Insured and how it works
+• Who is covered (family definition)
+• How to use e-card for cashless claims",L0 → L1 → L2 (view) → L6,"Headline: ""Your health coverage is ready""
+Subtext: ""[Company] has you covered""
+CTA: ""View your coverage""
+Tooltips: Sum Insured, Floater, Cashless
+Reassurance: ""No action needed - you're already protected"""
+V02,VANILLA,"When my employer provides additional coverage options, I want to see what's included, so I know the full value of my benefits","• Understand base + top-up coverage
+• See total protection amount
+• Know this is fully paid by employer","• Is the top-up automatic or do I need to do something?
+• What's the difference between base and top-up?","None (employer-paid, view-only)","• What is a top-up and how it extends coverage
+• Combined coverage calculation
+• When top-up kicks in",L0 → L1 → L2 (view) → L4 (view) → L6,"Headline: ""Your enhanced coverage""
+Subtext: ""Base + Top-up provided by [Company]""
+Top-up explanation: ""Extra ₹X kicks in after base is used""
+CTA: ""View your benefits"""
+V03,VANILLA,"When I have employer insurance, I want to add more protection, so I can cover higher medical expenses","• Compare top-up options and costs
+• Understand cost vs benefit trade-off
+• Make an informed investment decision","• Is the top-up worth the monthly cost?
+• What does it actually cover beyond base?
+• Can I change my decision later?","• Whether to purchase top-up (Yes/No)
+• Which top-up tier to select","• What is top-up and when it's useful
+• How premium is deducted from salary
+• Top-up claim process",L0 → L1 → L2 → L4 (decision) → L5 → L6,"Headline: ""Enhance your coverage""
+Subtext: ""Add extra protection for ₹X/month""
+Decision copy: ""Add ₹Y lakh more coverage""
+Anxiety reducer: ""Most employees add top-up for peace of mind""
+CTA Primary: ""Add top-up""
+CTA Secondary: ""Skip for now"""
+V04,VANILLA,"When my employer offers parental coverage, I want to understand what's included, so my parents are protected too","• See parental plan details
+• Understand coverage limits for parents
+• Know pre-existing disease terms","• Are both parents covered?
+• What about their pre-existing conditions?
+• Is this enough for elderly parents?",None (employer-paid secondary),"• Secondary plan concept
+• Parental policy specifics
+• Waiting periods for pre-existing diseases",L0 → L1 → L2 (view) → L4 (view secondary) → L6,"Headline: ""Parents covered too""
+Subtext: ""[Company] includes parental protection""
+Info: ""Coverage for your parents at no extra cost""
+Tooltips: Pre-existing disease, Waiting period"
+V05,VANILLA,"When I want to protect my parents, I want to add them to my policy, so they get corporate rates and benefits","• Compare parental plan options
+• Understand SI choices
+• Calculate monthly cost","• Is corporate parental policy better than retail?
+• What about their age and health conditions?
+• Which SI is right for parents?","• Whether to add parental coverage (Yes/No)
+• Which SI tier to select for parents","• Secondary plan for parents
+• Corporate vs retail policy benefits
+• SI selection considerations for elderly",L0 → L1 → L2 → L4 (decision) → L5 → L6,"Headline: ""Protect your parents""
+Subtext: ""Add parental coverage at corporate rates""
+Social proof: ""10,000+ employees chose parental coverage""
+Comparison: ""Save 30% vs individual policy""
+CTA: ""Add parents"""
+V06,VANILLA,"When I want comprehensive protection, I want to customize my coverage, so my entire family is well-protected","• Evaluate top-up options
+• Consider parental coverage
+• Optimize total investment","• Am I spending too much or too little?
+• Which combination gives best value?
+• Can I afford all the premiums?","• Top-up selection
+• Secondary plan selection
+• Combined budget decision","• How components work together
+• Total coverage calculation
+• Premium breakdown",L0 → L1 → L2 → L4 (multiple decisions) → L5 → L6,"Headline: ""Build your family's protection""
+Subtext: ""Choose the coverage that fits your needs""
+Guidance: ""Recommended based on family size""
+Budget helper: ""Your monthly investment: ₹X"""
+V07,VANILLA,"When I want maximum protection for parents, I want to add secondary top-ups, so their coverage is comprehensive","• Understand secondary top-up benefit
+• Calculate total parental coverage
+• Evaluate cost-benefit","• Is secondary top-up different from main top-up?
+• How much total coverage will parents have?
+• Is this overkill?","• Base top-up selection
+• Secondary plan selection
+• Secondary top-up selection","• How secondary top-ups work
+• Stacking coverage for parents
+• Premium calculation",L0 → L1 → L2 → L4 (all options) → L5 → L6,"Headline: ""Maximum family protection""
+Subtext: ""Comprehensive coverage for everyone""
+Visual: Coverage breakdown per family member
+CTA: ""Review your selections"""
+V08,VANILLA,"When my employer provides add-ons, I want to understand what extra benefits I have, so I can use them when needed","• Know which add-ons are included
+• Understand how to use each benefit
+• See total benefit value","• How do I actually use these add-ons?
+• Are there limits or conditions?
+• Do I need to do anything to activate?",None (employer-paid add-ons),"• What each add-on covers
+• How to claim add-on benefits
+• Usage limits and conditions",L0 → L1 → L2 (view) → L4 (view add-ons) → L6,"Headline: ""Your extra benefits""
+Subtext: ""Add-ons included by [Company]""
+Add-on cards: Clear benefit descriptions
+CTA: ""Explore your benefits"""
+V09,VANILLA,"When I see optional add-ons, I want to choose the ones I need, so I get specific benefits that matter to me","• Compare add-on options
+• Evaluate each benefit's value
+• Select based on personal needs","• Which add-ons are actually useful?
+• Am I paying for things I won't use?
+• Can I add more later?",• Which add-ons to purchase (multi-select),"• Each add-on's specific benefit
+• Use cases for each add-on
+• Cost per add-on",L0 → L1 → L2 → L4 (add-on selection) → L5 → L6,"Headline: ""Personalize your benefits""
+Subtext: ""Choose add-ons that fit your lifestyle""
+Add-on cards: Benefit + Price + ""Popular"" tags
+Recommendation: ""Based on your profile"""
+V10,VANILLA,"When I want both higher coverage and extra benefits, I want to select top-up and add-ons, so I have comprehensive protection","• Evaluate top-up value
+• Select relevant add-ons
+• Manage total budget","• Should I prioritize top-up or add-ons?
+• What's the best combination?
+• Is my total spend reasonable?","• Top-up selection
+• Add-on selection (multi-select)","• Top-up vs add-on difference
+• How to prioritize spending
+• Combined benefit value",L0 → L1 → L2 → L4 (top-up + add-ons) → L5 → L6,"Headline: ""Enhance + Personalize""
+Subtext: ""Add coverage and benefits together""
+Budget tracker: ""Total: ₹X/month""
+Guidance: ""Most popular combination"""
+V11,VANILLA,"When I want full customization, I want to configure all optional coverage, so I create the perfect protection package","• Configure top-up coverage
+• Add secondary plan
+• Select relevant add-ons","• Am I over-insuring?
+• What's the right balance?
+• Can I change this later?","• Top-up selection
+• Secondary plan selection
+• Add-on selection","• Full coverage architecture
+• How components complement each other
+• Annual vs monthly view",L0 → L1 → L2 → L4 (full config) → L5 → L6,"Headline: ""Design your coverage""
+Subtext: ""Full flexibility to customize""
+Progress: ""3 more steps to complete""
+Summary card: Real-time total"
+V12,VANILLA,"When maximum coverage options exist, I want to build the most comprehensive plan, so my family has the best protection","• Maximize base coverage extension
+• Add complete secondary coverage
+• Include all valuable add-ons","• Is maximum always better?
+• Am I duplicating coverage?
+• What's the claim process for all this?","• Top-up tier selection
+• Secondary plan + top-up selection
+• Add-on selection","• Complete coverage explanation
+• Overlap and gap analysis
+• Priority during claims",L0 → L1 → L2 → L4 (maximum options) → L5 → L6,"Headline: ""Premium protection""
+Subtext: ""Maximum coverage for your family""
+Value message: ""Complete peace of mind""
+Comparison: ""You're in top 10% coverage"""
+V13,VANILLA,"When I have consolidated top-up option, I want to understand how it works across plans, so I choose the right coverage","• Understand consolidated concept
+• See combined coverage benefit
+• Compare with separate top-ups","• Is consolidated better than separate?
+• How does the claim work?
+• Who is covered under consolidated?","• Consolidated top-up tier selection
+• Secondary plan selection","• Consolidated vs separate top-ups
+• Family coverage under consolidated
+• Claim priority",L0 → L1 → L2 → L4 (consolidated) → L5 → L6,"Headline: ""Combined coverage boost""
+Subtext: ""One top-up for entire family""
+Explanation: ""Covers base + secondary together""
+Visual: Family coverage diagram"
+V14,VANILLA,"When I want consolidated coverage plus add-ons, I want to configure the optimal mix, so I have complete protection","• Configure consolidated top-up
+• Select secondary plan
+• Choose add-ons","• How do add-ons work with consolidated?
+• Is there any overlap?
+• What's not covered?","• Consolidated top-up selection
+• Secondary plan selection
+• Add-on selection","• Consolidated + add-on interaction
+• Coverage gap analysis
+• Complete benefit map",L0 → L1 → L2 → L4 (consolidated + add-ons) → L5 → L6,"Headline: ""Comprehensive coverage""
+Subtext: ""Consolidated top-up + add-ons""
+Coverage map: Visual showing all protections"
+V15,VANILLA,"When employer partially pays base, I want to understand my contribution, so I know what I'm paying for","• See employer vs employee split
+• Understand what's covered
+• Evaluate top-up value","• Why am I paying for base coverage?
+• Is this normal?
+• What if I can't afford it?","• Acknowledge base contribution
+• Optional top-up selection","• Partial payment concept
+• Employer contribution value
+• Salary deduction process",L0 → L1 (with cost) → L2 → L4 → L5 → L6,"Headline: ""Your shared coverage""
+Subtext: ""[Company] pays ₹X, you pay ₹Y""
+Value frame: ""80% employer-funded""
+Transparency: Clear cost breakdown"
+V16,VANILLA,"When employer pays for all enhancements, I want to know my full coverage, so I appreciate the complete benefit","• See complete coverage value
+• Understand all benefits
+• Know how to use everything","• Is this really all free to me?
+• What's the catch?
+• How do I make the most of it?",None (all employer-paid),"• Full benefit package overview
+• How to use each component
+• Total benefit value",L0 → L1 → L2 (view) → L4 (view all) → L6,"Headline: ""Your complete coverage""
+Subtext: ""Everything paid by [Company]""
+Value display: ""₹X total annual value""
+CTA: ""Explore your benefits"""
+V17,VANILLA,"When multiple secondary plans exist, I want to compare and choose, so I select the best fit for my family","• Compare secondary plan options
+• Understand differences
+• Choose based on family needs","• Which plan is better for my situation?
+• Can I take multiple?
+• What if I choose wrong?",• Which secondary plan to select,"• Secondary plan differences
+• Family fit analysis
+• Switching rules",L0 → L1 → L2 → L4 (plan comparison) → L5 → L6,"Headline: ""Choose your secondary coverage""
+Subtext: ""Multiple options for your family""
+Comparison table: Side-by-side features
+Recommendation: ""Best for your family type"""
+V18,VANILLA,"When secondary plan has SI options, I want to choose the right amount, so my parents have adequate coverage","• Compare SI levels
+• Understand premium differences
+• Match to parents' needs","• Is higher SI worth the extra cost?
+• What's enough for my parents' age?
+• What do others choose?",• Secondary plan SI tier selection,"• SI selection based on age/health
+• Premium vs coverage trade-off
+• Industry benchmarks",L0 → L1 → L2 → L4 (SI selection) → L5 → L6,"Headline: ""Choose coverage amount""
+Subtext: ""Select Sum Insured for parents""
+Guidance: ""Recommended for age 60+: ₹10L""
+Comparison: Premium vs SI chart"
+V19,VANILLA,"When employer subsidizes voluntary items, I want to see the discounted cost, so I make informed decisions","• See employer subsidy on each item
+• Compare final cost
+• Evaluate value with discount","• How much am I actually saving?
+• Is the discounted price good value?
+• What's my total out-of-pocket?","• Top-up selection (subsidized)
+• Add-on selection (subsidized)","• Subsidy calculation
+• True cost vs market price
+• Combined savings",L0 → L1 → L2 → L4 (subsidized) → L5 → L6,"Headline: ""Discounted benefits""
+Subtext: ""[Company] subsidizes your extras""
+Pricing: ""₹X (₹Y off)""
+Savings badge: ""You save 40%"""
+V20,VANILLA,"When pre-enrollment is active for full config, I want to share my preferences, so my choices are captured","• Indicate all preferences
+• Understand this is pre-enrollment
+• Know final confirmation comes later","• Is this binding or just preference?
+• When will actual enrollment happen?
+• Can I change my mind?",• All coverage preferences (non-binding),"• Pre-enrollment process
+• Timeline to final enrollment
+• How preferences are used",L0 → L1 → L2 → L3 → L4 (all) → L6 (preference),"Headline: ""Share your preferences""
+Subtext: ""Pre-enrollment survey""
+Clarification: ""Not final - you'll confirm later""
+Timeline: ""Actual enrollment starts [date]"""
+M01,MODULAR,"When I have tier options, I want to understand each tier, so I know what I'm getting","• Compare tier benefits
+• Understand coverage differences
+• See what employer provides","• Which tier am I on?
+• What's different in each tier?
+• Can I upgrade?",None if no upgrade option,"• Tier benefit comparison
+• What employer selected for me
+• Room rent/OPD limits per tier",L0 → L1 (tier view) → L2 (view) → L6,"Headline: ""Your [Tier] coverage""
+Subtext: ""Here's what your plan includes""
+Tier badge: Silver/Gold/Platinum
+Comparison: ""What other tiers offer"""
+M02,MODULAR,"When I can upgrade my tier, I want to compare options, so I choose the right level of protection","• Compare current vs higher tiers
+• Understand upgrade cost
+• Evaluate benefit increase","• Is upgrading worth the cost?
+• What specific benefits improve?
+• Can I downgrade later?",• Which tier to select (upgrade decision),"• Tier comparison matrix
+• Upgrade cost calculation
+• Key benefit differences",L0 → L1 → L2 → L3 (tier selection) → L5 → L6,"Headline: ""Upgrade your plan""
+Subtext: ""Move to a higher tier""
+Comparison: Side-by-side tier benefits
+Upgrade CTA: ""+₹X/month for Gold tier"""
+M03,MODULAR,"When I can upgrade tier and add add-ons, I want to optimize my package, so I get the best value","• Decide on tier upgrade
+• Select relevant add-ons
+• Balance total investment","• Should I upgrade tier or add add-ons?
+• What gives better value?
+• Can I afford both?","• Tier selection
+• Add-on selection","• Tier vs add-on value comparison
+• Combined benefit analysis
+• Budget optimization",L0 → L1 → L2 → L3 (tier) → L4 (add-ons) → L5 → L6,"Headline: ""Customize your coverage""
+Subtext: ""Upgrade tier + add benefits""
+Guidance: ""Popular combo: Gold + OPD""
+Budget tracker: Running total"
+M04,MODULAR,"When modular includes secondary plans, I want to configure both, so my whole family is protected","• Configure base tier
+• Add secondary for parents
+• Balance family coverage","• Should I prioritize my tier or parents' coverage?
+• What's the total family cost?
+• Is there overlap?","• Tier selection
+• Secondary plan selection","• Family coverage architecture
+• Tier + secondary interaction
+• Total family protection view",L0 → L1 → L2 → L3 (tier) → L4 (secondary) → L5 → L6,"Headline: ""Family coverage""
+Subtext: ""Your tier + parental protection""
+Family view: Coverage per member
+Balance guide: ""Optimize family spend"""
+M05,MODULAR,"When full modular options exist, I want to build complete coverage, so everyone gets the right protection","• Optimize tier selection
+• Configure secondary plan
+• Add relevant add-ons","• How do I prioritize across options?
+• Is this the best combination?
+• What's the total commitment?","• Tier selection
+• Secondary plan selection
+• Add-on selection","• Full modular architecture
+• Priority framework
+• Coverage completeness check",L0 → L1 → L2 → L3 → L4 (full) → L5 → L6,"Headline: ""Build complete coverage""
+Subtext: ""Tier + Secondary + Add-ons""
+Progress: Step indicator
+Summary: Real-time package view"
+M06,MODULAR,"When maximum modular options exist, I want to create premium coverage, so my family has the best","• Select highest tier
+• Add comprehensive secondary
+• Include all add-ons","• Is maximum the right choice?
+• Am I over-insuring?
+• What's the premium burden?","• Tier selection
+• Secondary + its top-up
+• All add-ons","• Maximum coverage analysis
+• Cost-benefit of premium package
+• When maximum makes sense",L0 → L1 → L2 → L3 → L4 (all options) → L5 → L6,"Headline: ""Premium protection""
+Subtext: ""Maximum coverage for your family""
+Value frame: ""Top 5% coverage level""
+Total value display"
+M07,MODULAR,"When only tier and add-ons are available, I want to focus on these options, so I make the right choices","• Understand tier options
+• Evaluate add-on benefits
+• Create optimal combination","• Which combination works best?
+• Are add-ons worth it without secondary?
+• What am I missing?","• Tier selection
+• Add-on selection","• Tier + add-on synergy
+• Coverage gap analysis
+• Value optimization",L0 → L1 → L2 → L3 (tier) → L4 (add-ons only) → L5 → L6,"Headline: ""Your tier + extras""
+Subtext: ""Upgrade and personalize""
+Focus: Clear tier comparison
+Add-on recommendations"
+M08,MODULAR,"When I share base cost with employer, I want to understand the split, so I know my investment","• See cost sharing structure
+• Understand my contribution
+• Evaluate upgrade value","• Why do I pay for base?
+• Is the employer contribution fair?
+• What do I get for my money?","• Acknowledge base cost
+• Tier upgrade decision","• Partial payment model
+• Employer vs employee split
+• Value of employer contribution",L0 → L1 (cost split) → L2 → L3 → L5 → L6,"Headline: ""Shared coverage cost""
+Subtext: ""[Company] pays X%, you pay Y%""
+Transparency: Clear cost breakdown
+Value: What employer contributes"
+M09,MODULAR,"When modular has min participation, I want to indicate my preference, so I'm included if plan rolls out","• Understand min participation
+• Indicate tier preference
+• Know the timeline","• Will the plan actually happen?
+• Is my selection binding?
+• What if it doesn't roll out?",• Tier preference indication,"• Min participation for modular
+• Preference vs commitment
+• Rollout process",L0 → L1 → L2 → L3 (preference) → L6 (pending),"Headline: ""Indicate your preference""
+Subtext: ""Subject to minimum enrollment""
+Status: Enrollment progress
+Clarification: ""Confirmed after X%"""
+M10,MODULAR,"When pre-enrollment modular is active, I want to share all preferences, so my complete choices are captured","• Indicate tier preference
+• Select secondary plan preference
+• Choose add-on interests","• How binding is this?
+• Can I change during actual enrollment?
+• When is final decision?",• All modular preferences (non-binding),"• Pre-enrollment modular process
+• How preferences inform final options
+• Timeline",L0 → L1 → L2 → L3 → L4 (all pref) → L6 (pref),"Headline: ""Pre-enrollment preferences""
+Subtext: ""Help us plan your options""
+Note: ""You'll confirm during enrollment""
+Timeline: Clear milestones"
+M11,MODULAR,"When tiers are grade-based, I want to see my eligible options, so I choose from what's available to me","• Understand grade-based eligibility
+• See available tiers for my grade
+• Choose from eligible options","• Why can't I see all tiers?
+• Is my grade correct?
+• Can I access higher tiers?",• Tier selection (within grade eligibility),"• Grade-based plan concept
+• How grades determine options
+• Eligibility rules",L0 → L1 → L2 → L3 (grade-filtered) → L5 → L6,"Headline: ""Your tier options""
+Subtext: ""Based on your grade: [Grade]""
+Filtered view: Only eligible tiers
+Info: ""Why these options?"""
+F01,FLEX,"When I have a benefits wallet, I want to understand how it works, so I can use it effectively","• Understand wallet concept
+• See wallet amount
+• Know what it covers","• What exactly is a wallet?
+• Will I lose unused amount?
+• How is it different from coverage?","None (wallet = base, view-only)","• Wallet concept explanation
+• How wallet converts to coverage
+• Usage rules",L0 → L1 (wallet display) → L2 (view) → L6,"Headline: ""Your benefits wallet""
+Subtext: ""₹X to use for coverage""
+Wallet visual: Balance display
+Explanation: ""How your wallet works"""
+F02,FLEX,"When wallet includes add-ons, I want to explore options, so I use my wallet wisely","• See base coverage from wallet
+• Explore add-on options
+• Allocate wallet optimally","• How do I split wallet between base and add-ons?
+• What happens if I don't use full wallet?
+• Can I change allocation?",• Add-on selection within wallet,"• Wallet allocation concept
+• Add-on costs from wallet
+• Optimization tips",L0 → L1 (wallet) → L2 → L4 (add-ons) → L6,"Headline: ""Use your wallet""
+Subtext: ""Base coverage + add-ons""
+Wallet tracker: Remaining balance
+Add-on cards: Cost from wallet"
+F03,FLEX,"When I can choose SI within wallet, I want to select the right amount, so I balance coverage and cost","• See SI options available
+• Understand wallet consumption per SI
+• Choose optimal SI level","• Which SI is right for my family?
+• What if I need more than wallet covers?
+• Is higher SI always better?",• SI tier selection,"• SI options within wallet
+• Coverage vs wallet trade-off
+• Family size considerations",L0 → L1 (wallet) → L2 → L3 (SI selection) → L6,"Headline: ""Choose your coverage""
+Subtext: ""Select Sum Insured""
+Wallet impact: ""₹X SI = ₹Y from wallet""
+Recommendation: ""For family of 4"""
+F04,FLEX,"When I can choose family definition, I want to decide who to cover, so I protect the right people","• See family definition options
+• Understand coverage per definition
+• Choose based on family needs","• Should I include parents in base or separate?
+• What's the cost difference?
+• Can I change later?","• Family definition selection (E, ES, ESC, ESCP)","• Family definition options
+• Cost per definition
+• Implications for dependents",L0 → L1 (wallet) → L2 → L3 (family def) → L6,"Headline: ""Who to cover?""
+Subtext: ""Choose your family definition""
+Options: E/ES/ESC/ESCP cards
+Cost impact: Per definition"
+F05,FLEX,"When I can configure SI and family, I want to create the perfect plan, so my family gets exactly what we need","• Configure SI level
+• Select family definition
+• Optimize within wallet","• What's the best SI + family combo?
+• Am I over/under spending wallet?
+• What do others like me choose?","• SI selection
+• Family definition selection","• SI and family trade-offs
+• Common configurations
+• Wallet optimization",L0 → L1 (wallet) → L2 → L3 (SI + family) → L6,"Headline: ""Configure your coverage""
+Subtext: ""SI + Family definition""
+Configurator: Interactive selection
+Wallet meter: Real-time balance"
+F06,FLEX,"When wallet includes top-up, I want to evaluate the option, so I decide if extra coverage is needed","• Understand top-up within flex
+• See wallet vs out-of-pocket cost
+• Decide on top-up","• Should I use wallet for top-up or save it?
+• Is top-up worth the extra cost?
+• How does it work with base SI?",• Top-up selection (wallet or employee-paid),"• Top-up in flex context
+• Wallet allocation strategy
+• Top-up benefit analysis",L0 → L1 (wallet) → L2 → L3 → L4 (top-up) → L5 → L6,"Headline: ""Add more coverage""
+Subtext: ""Top-up from wallet or pocket""
+Decision: Wallet vs employee-paid
+Benefit: Top-up value explanation"
+F07,FLEX,"When wallet includes secondary plan option, I want to explore it, so I can cover my parents too","• See secondary plan options
+• Understand wallet allocation for secondary
+• Decide on parental coverage","• Can wallet cover secondary?
+• Is it better to use wallet here or for base?
+• What's the best allocation?",• Secondary plan selection (wallet or employee-paid),"• Secondary in flex context
+• Wallet allocation for parents
+• Optimization strategy",L0 → L1 (wallet) → L2 → L3 → L4 (secondary) → L5 → L6,"Headline: ""Cover your parents""
+Subtext: ""Use wallet for parental plan""
+Allocation: Wallet split visual
+Recommendation: Optimal allocation"
+F08,FLEX,"When wallet covers top-up and secondary, I want to allocate optimally, so everyone is well protected","• Understand allocation options
+• Balance top-up vs secondary
+• Optimize wallet usage","• How do I split wallet between top-up and secondary?
+• Which is more important?
+• What if wallet isn't enough?","• Top-up allocation
+• Secondary plan allocation","• Wallet allocation strategy
+• Priority framework
+• Overflow handling",L0 → L1 (wallet) → L2 → L3 → L4 (both) → L5 → L6,"Headline: ""Allocate your wallet""
+Subtext: ""Top-up + Secondary options""
+Allocator: Visual wallet splitter
+Guidance: Suggested allocation"
+F09,FLEX,"When full flex options exist, I want to create comprehensive coverage, so my family has complete protection","• Configure base plan
+• Allocate for top-up
+• Add secondary
+• Select add-ons","• How do I prioritize all these options?
+• Is my allocation balanced?
+• Am I missing anything?","• Base configuration
+• Top-up selection
+• Secondary selection
+• Add-on selection","• Full flex architecture
+• Allocation prioritization
+• Coverage completeness",L0 → L1 (wallet) → L2 → L3 → L4 (full) → L5 → L6,"Headline: ""Build your coverage""
+Subtext: ""Full flexibility to customize""
+Builder: Step-by-step configurator
+Progress: Wallet utilization meter"
+F10,FLEX,"When maximum flex options exist, I want to create premium protection, so nothing is left out","• Maximize base coverage
+• Add comprehensive top-ups
+• Include secondary with top-ups
+• Select all add-ons","• Should I max out everything?
+• What's the total out-of-pocket?
+• Is this the best use of wallet?",• All flex decisions at maximum,"• Maximum flex coverage
+• Cost of premium package
+• Value analysis",L0 → L1 (wallet) → L2 → L3 → L4 (maximum) → L5 → L6,"Headline: ""Premium flex package""
+Subtext: ""Maximum coverage configuration""
+Total value: Complete protection view
+Cost: Wallet + out-of-pocket"
+F11,FLEX,"When I have custom wallet (>base), I want to use the extra amount, so I maximize my benefit","• Understand custom wallet amount
+• See extra available beyond base
+• Allocate extra to add-ons","• How do I use the extra wallet?
+• Can I cash it out?
+• What are my best options?",• Add-on selection with extra wallet,"• Custom wallet concept
+• Extra wallet usage options
+• Optimization strategies",L0 → L1 (custom wallet) → L2 → L4 (add-ons) → L6,"Headline: ""Extra wallet benefits""
+Subtext: ""₹X extra beyond base coverage""
+Highlight: Additional amount available
+Suggestions: Best use of extra"
+F12,FLEX,"When I want to upgrade beyond wallet, I want to understand the extra cost, so I make an informed decision","• See upgrade options
+• Calculate out-of-pocket for upgrade
+• Decide if upgrade is worth it","• Is the upgrade worth paying extra?
+• How much more will I pay?
+• Can I afford the premium?",• Upgrade selection (employee-paid overflow),"• Upgrade beyond wallet
+• Out-of-pocket calculation
+• Value of upgrade",L0 → L1 (wallet) → L2 → L3 (upgrade) → L5 → L6,"Headline: ""Upgrade your coverage""
+Subtext: ""Beyond wallet, you pay ₹X""
+Comparison: Wallet limit vs upgrade
+Value frame: What extra covers"
+F13,FLEX,"When I can downgrade for wallet savings, I want to understand the trade-off, so I use savings wisely","• Understand downgrade impact
+• See wallet savings from downgrade
+• Allocate savings to add-ons","• What am I giving up by downgrading?
+• Is the wallet saving worth it?
+• Can I still get good coverage?","• Downgrade decision
+• Add-on selection with savings","• Downgrade implications
+• Wallet saving calculation
+• Reallocation options",L0 → L1 (wallet) → L2 → L3 (downgrade) → L4 (add-ons) → L6,"Headline: ""Reallocate your benefits""
+Subtext: ""Lower base, more add-ons""
+Trade-off: Clear coverage comparison
+Warning: What you're reducing"
+F14,FLEX,"When I can choose cover variants, I want to customize specific benefits, so I get what matters to me","• See cover variant options
+• Understand each variant benefit
+• Select based on needs","• What are cover variants?
+• Which variants are useful for me?
+• How does this affect premium?","• Cover variant selection (e.g., maternity)","• Cover variants explanation
+• When each variant is valuable
+• Premium impact",L0 → L1 (wallet) → L2 → L3 (variants) → L6,"Headline: ""Customize your benefits""
+Subtext: ""Add specific coverage modules""
+Variant cards: Clear benefit descriptions
+Recommendation: Based on profile"
+F15,FLEX,"When multiple secondary options exist, I want to compare and choose, so I pick the best for my parents","• Compare secondary plan options
+• Allocate wallet appropriately
+• Select add-ons as needed","• Which secondary plan is better?
+• How much wallet should I allocate?
+• Can I take multiple?","• Secondary plan selection
+• Add-on selection","• Secondary plan comparison
+• Wallet allocation for secondary
+• Combined selection",L0 → L1 (wallet) → L2 → L4 (secondary + add-ons) → L5 → L6,"Headline: ""Choose parental coverage""
+Subtext: ""Multiple options available""
+Comparison: Plan feature table
+Wallet allocation: Visual splitter"
+F16,FLEX,"When consolidated top-up exists in flex, I want to understand how it works, so I allocate correctly","• Understand consolidated in flex
+• See wallet consumption for consolidated
+• Balance with other options","• Is consolidated better than separate?
+• How does it interact with wallet?
+• What's covered under consolidated?","• Consolidated top-up selection
+• Secondary selection
+• Add-on selection","• Consolidated in flex context
+• Wallet optimization with consolidated
+• Coverage architecture",L0 → L1 (wallet) → L2 → L3 → L4 (consolidated) → L5 → L6,"Headline: ""Consolidated coverage boost""
+Subtext: ""One top-up for all plans""
+Explanation: How consolidated works with wallet
+Allocation: Visual representation"
+F17,FLEX,"When flex has min participation, I want to indicate my preferences, so I'm included in rollout","• Understand min participation
+• Share wallet allocation preferences
+• Know the timeline","• Is my wallet amount confirmed?
+• What if plan doesn't roll out?
+• When will I know?",• Wallet allocation preferences (non-binding),"• Min participation for flex
+• Wallet in pre-rollout phase
+• Process timeline",L0 → L1 (wallet - pending) → L2 → L4 (pref) → L6 (pending),"Headline: ""Share your preferences""
+Subtext: ""Pending minimum enrollment""
+Status: Enrollment progress
+Wallet: ""Confirmed after rollout"""
+F18,FLEX,"When pre-enrollment flex is active, I want to share all preferences, so my complete needs are captured","• Indicate all flex preferences
+• Share wallet allocation wishes
+• Know this is preliminary","• How accurate should my preferences be?
+• Can I change during actual enrollment?
+• What happens to these preferences?",• All flex preferences (non-binding),"• Pre-enrollment flex process
+• How preferences inform final options
+• Timeline to actual enrollment",L0 → L1 (wallet - indicative) → L2 → L3 → L4 (all pref) → L6 (pref),"Headline: ""Pre-enrollment preferences""
+Subtext: ""Help us design your options""
+Note: ""Final selection during enrollment""
+Timeline: Key dates"
+F19,FLEX,"When wallet is grade-based, I want to see my allocation, so I understand my specific benefits","• Understand grade-based wallet
+• See my wallet amount for my grade
+• Plan within my allocation","• Why is my wallet different from colleagues?
+• Is my grade correct?
+• Can I get more wallet?",• Add-on selection within grade-based wallet,"• Grade-based wallet concept
+• How grades determine wallet
+• Working within allocation",L0 → L1 (grade-based wallet) → L2 → L4 (add-ons) → L6,"Headline: ""Your wallet: ₹X""
+Subtext: ""Based on your grade: [Grade]""
+Explanation: ""How wallet is determined""
+Optimization: Within your allocation"
+F20,FLEX,"When wallet is for wellness products, I want to explore options, so I use it for health and wellbeing","• Understand wellness wallet
+• See available products/services
+• Select based on interests","• What counts as wellness?
+• Can I use it for insurance?
+• What if I don't use it?",• Wellness product selection,"• Wellness wallet concept
+• Available wellness options
+• Usage rules and restrictions",L0 → L1 (wellness wallet) → L4 (wellness products) → L6,"Headline: ""Your wellness wallet""
+Subtext: ""₹X for health & wellbeing""
+Options: Wellness product catalog
+Categories: Gym, mental health, nutrition, etc."

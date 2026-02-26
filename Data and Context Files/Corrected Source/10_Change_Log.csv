@@ -1,0 +1,21 @@
+CHANGE LOG - v2 → v3,,,
+Area,Change Type,Description,Rationale
+Sheet 1,ADDED,Grouping row: Construct Variables | Payment Variables | Post-Construct Modifiers,Clear separation of parameter types
+Sheet 1,KEPT,All 52 combinations retained (V20 marked for removal),"Preserve existing structure, flag issues"
+Sheet 1,MARKED,V20 highlighted pink - recommended removal,Base plan never has min participation
+Sheet 1,FLAGGED,V21 flagged for review,"Similar to V12, differs only by flags"
+Sheet 1,RENAMED,"Modular: ""Modular Top-Up"" → ""Tier Upgrade""",Clearer terminology per PM feedback
+Sheet 1,SIMPLIFIED,"FLEX: All Wallet-Based variants → ""Base Variable""",Per PM: No deeper variants needed
+Sheet 1,CLARIFIED,M01: View assigned tier only,No upgrade option
+Sheet 1,CLARIFIED,M07: Modular view-only + add-ons,Per Point 4 discussion
+Sheet 7,UPDATED,EC02: Parent addition - hybrid L2/L4 approach,"Inline in L2, configurable in L4"
+Sheet 7,ADDED,EC-NEW-01: Data mismatch handling,More dependents than allowed
+Sheet 7,ADDED,EC-NEW-02: Incomplete enrollment,Must complete all layers
+Sheet 7,ADDED,EC-NEW-03: Drop-off recovery,Comms and re-entry
+Sheet 7,ADDED,EC-NEW-04: Re-enrollment override,User restarts after completion
+NEW,ADDED,Sheet 8: Post-Construct Modifiers detail,Detailed reference for modifiers
+NEW,ADDED,Sheet 9: Configuration Variables,Add-On & Paid By variables
+NEW,ADDED,Sheet 10: Change Log,This sheet
+Sheet 1,REASSIGNED,F06-F10: Changed to Base Fixed,These are fixed base + enhancements
+Sheet 1,REASSIGNED,F16-F20: Changed to Base Fixed,Fixed base with add-ons/special configs
+Sheet 1,KEPT,"F01-F05, F11-F15: Remain Base Variable","Configurable base (SI, Family, etc.)"

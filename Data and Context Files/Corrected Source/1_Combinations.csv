@@ -1,0 +1,53 @@
+,CONSTRUCT VARIABLES,,,,,,PAYMENT VARIABLES,,,,POST-CONSTRUCT MODIFIERS,,,,,
+Combo ID,Construct Type,Base Plan,Top-Up,Secondary Plan,Secondary Top-Up,Add-Ons,Base Payment,TopUp Payment,Secondary Payment,AddOn Payment,Min Participation,Pre-Enrollment,CD Balance Check,Grade-Based,E-Card Eligible,Real-World Example
+V01,VANILLA,Fixed,None,None,None,None,Employer,-,-,-,No,No,Optional,Optional,Yes,Basic GMC - employer provides fixed coverage
+V02,VANILLA,Fixed,Available,None,None,None,Employer,Employer,-,-,No,No,Optional,Optional,Yes,GMC with employer-funded top-up option
+V03,VANILLA,Fixed,Available,None,None,None,Employer,Employee,-,-,Optional,No,Yes,Optional,Conditional,GMC with voluntary top-up purchase
+V04,VANILLA,Fixed,None,Available,None,None,Employer,-,Employer,-,No,No,Optional,Optional,Yes,ESC + Parental (employer-funded)
+V05,VANILLA,Fixed,None,Available,None,None,Employer,-,Employee,-,Optional,No,Yes,Optional,Conditional,ESC + voluntary Parental purchase
+V06,VANILLA,Fixed,Available,Available,None,None,Employer,Employee,Employee,-,Optional,No,Yes,Optional,Conditional,Full voluntary enhancement options
+V07,VANILLA,Fixed,Available,Available,Available,None,Employer,Employee,Employee,-,Optional,No,Yes,Optional,Conditional,With secondary top-ups
+V08,VANILLA,Fixed,None,None,None,Available,Employer,-,-,Employer,No,No,Optional,Optional,Yes,GMC with employer-funded add-ons
+V09,VANILLA,Fixed,None,None,None,Available,Employer,-,-,Employee,Optional,No,Yes,Optional,Conditional,GMC with voluntary add-on purchase
+V10,VANILLA,Fixed,Available,None,None,Available,Employer,Employee,-,Employee,Optional,No,Yes,Optional,Conditional,Top-up + Add-ons voluntary
+V11,VANILLA,Fixed,Available,Available,None,Available,Employer,Employee,Employee,Employee,Optional,No,Yes,Optional,Conditional,Full stack - all voluntary
+V12,VANILLA,Fixed,Available,Available,Available,Available,Employer,Employee,Employee,Employee,Optional,No,Yes,Optional,Conditional,Maximum configuration
+V13,VANILLA,Fixed,Consolidated,Available,None,None,Employer,Employee,Employee,-,Optional,No,Yes,Optional,Conditional,Consolidated top-up across base+secondary
+V14,VANILLA,Fixed,Consolidated,Available,None,Available,Employer,Employee,Employee,Employee,Optional,No,Yes,Optional,Conditional,Consolidated + add-ons
+V15,VANILLA,Fixed,Available,None,None,None,Partial,Employee,-,-,Optional,No,Yes,Optional,Conditional,Employer subsidizes base partially
+V16,VANILLA,Fixed,Available,Available,None,None,Employer,Employer,Employer,-,No,No,Optional,Optional,Yes,Full employer-paid enhancement
+V17,VANILLA,Fixed,None,Available (Multi),None,None,Employer,-,Employee,-,Optional,No,Yes,Optional,Conditional,Multiple secondary plan options
+V18,VANILLA,Fixed,None,Available (SI Variants),None,None,Employer,-,Employee,-,Optional,No,Yes,Optional,Conditional,Secondary with SI selection
+V19,VANILLA,Fixed,Available,None,None,Available,Employer,Partial,-,Partial,Optional,No,Yes,Optional,Conditional,Employer subsidy on voluntary items
+V20,VANILLA,Fixed,Available,Available,Available,Available,Employer,Employee,Employee,Employee,Yes,Yes,Yes,Yes,Pending,Pre-enrollment full config | REVIEW: Differs from V12 only by system flags
+M01,MODULAR,Tier-Selectable,None,None,None,None,Employer (Base),-,-,-,No,No,Optional,Optional,Yes,View assigned tier only - no upgrade option (tier display)
+M02,MODULAR,Tier-Selectable,Tier Upgrade,None,None,None,Employer (Base),Employee (Upgrade),-,-,Optional,No,Yes,Optional,Conditional,Pay to upgrade tier
+M03,MODULAR,Tier-Selectable,Tier Upgrade,None,None,Available,Employer (Base),Employee (Upgrade),-,Employee,Optional,No,Yes,Optional,Conditional,Tier upgrade + add-ons
+M04,MODULAR,Tier-Selectable,Tier Upgrade,Available,None,None,Employer (Base),Employee (Upgrade),Employee,-,Optional,No,Yes,Optional,Conditional,Modular + secondary
+M05,MODULAR,Tier-Selectable,Tier Upgrade,Available,None,Available,Employer (Base),Employee (Upgrade),Employee,Employee,Optional,No,Yes,Optional,Conditional,Full modular stack
+M06,MODULAR,Tier-Selectable,Tier Upgrade,Available,Available,Available,Employer (Base),Employee (Upgrade),Employee,Employee,Optional,No,Yes,Optional,Conditional,Max modular config
+M07,MODULAR,Tier-Selectable,None,None,None,Available,Employer (Base),-,-,Employee,Optional,No,Yes,Optional,Conditional,Modular view-only with add-ons selection (no tier upgrade)
+M08,MODULAR,Tier-Selectable,Tier Upgrade,None,None,None,Partial,Employee,-,-,Optional,No,Yes,Optional,Conditional,Partial employer contribution
+M09,MODULAR,Tier-Selectable,Tier Upgrade,None,None,None,Employer (Base),Employee (Upgrade),-,-,Yes,No,Yes,Optional,Pending,Modular with min participation
+M10,MODULAR,Tier-Selectable,Tier Upgrade,Available,None,Available,Employer (Base),Employee (Upgrade),Employee,Employee,Yes,Yes,Yes,Yes,Pending,Pre-enrollment modular
+M11,MODULAR,Tier-Selectable (Grade),Tier Upgrade,None,None,None,Employer (Base),Employee (Upgrade),-,-,Optional,No,Yes,Yes,Conditional,Grade-based tier eligibility
+F01,FLEX,Base Variable,None,None,None,None,Wallet,-,-,-,No,No,Yes,Optional,Yes,Basic wallet = base premium
+F02,FLEX,Base Variable,None,None,None,Available,Wallet,-,-,Wallet,No,No,Yes,Optional,Yes,Wallet for base + add-ons
+F03,FLEX,Base Variable,None,None,None,None,Wallet,-,-,-,No,No,Yes,Optional,Conditional,Choose SI within wallet
+F04,FLEX,Base Variable,None,None,None,None,Wallet,-,-,-,No,No,Yes,Optional,Conditional,Choose family def within wallet
+F05,FLEX,Base Variable,None,None,None,None,Wallet,-,-,-,No,No,Yes,Optional,Conditional,Configure SI + family
+F06,FLEX,Base Fixed,Available,None,None,None,Wallet,Wallet/Employee,-,-,Optional,No,Yes,Optional,Conditional,Base Fixed + Flex Top-up | Wallet + top-up option
+F07,FLEX,Base Fixed,None,Available,None,None,Wallet,-,Wallet/Employee,-,Optional,No,Yes,Optional,Conditional,Base Fixed + Secondary | Wallet + secondary
+F08,FLEX,Base Fixed,Available,Available,None,None,Wallet,Wallet/Employee,Wallet/Employee,-,Optional,No,Yes,Optional,Conditional,Base Fixed + Flex Top-up + Secondary | Wallet + top-up + secondary
+F09,FLEX,Base Fixed,Available,Available,None,Available,Wallet,Wallet/Employee,Wallet/Employee,Wallet/Employee,Optional,No,Yes,Optional,Conditional,Base Fixed + Full stack | Full flex stack
+F10,FLEX,Base Fixed,Available,Available,Available,Available,Wallet,Wallet/Employee,Wallet/Employee,Wallet/Employee,Optional,No,Yes,Optional,Conditional,Base Fixed + Maximum config | Maximum flex config
+F11,FLEX,Base Variable,None,None,None,Available,Wallet (Custom),-,-,Wallet,No,No,Yes,Optional,Yes,Custom wallet > base premium
+F12,FLEX,Base Variable,None,None,None,None,Wallet+Employee,-,-,-,No,No,Yes,Optional,Conditional,Upgrade beyond wallet
+F13,FLEX,Base Variable,None,None,None,Available,Wallet (Partial),-,-,Wallet Balance,No,No,Yes,Optional,Conditional,Downgrade to use wallet elsewhere
+F14,FLEX,Base Variable,None,None,None,None,Wallet,-,-,-,No,No,Yes,Optional,Conditional,Choose cover variants (maternity etc)
+F15,FLEX,Base Variable,None,Available (Multi),None,Available,Wallet,-,Wallet/Employee,Wallet/Employee,Optional,No,Yes,Optional,Conditional,Multiple secondary options
+F16,FLEX,Base Fixed,Consolidated,Available,None,Available,Wallet,Wallet/Employee,Wallet/Employee,Wallet/Employee,Optional,No,Yes,Optional,Conditional,Base Fixed + Consolidated Top-up | Consolidated top-up
+F17,FLEX,Base Fixed,None,None,None,Available,Wallet,-,-,Wallet,Yes,No,Yes,Optional,Pending,Base Fixed + Add-ons (with min part) | Flex with min participation
+F18,FLEX,Base Fixed,Available,Available,None,Available,Wallet,Wallet/Employee,Wallet/Employee,Wallet/Employee,Yes,Yes,Yes,Yes,Pending,Base Fixed + Full stack (pre-enroll) | Pre-enrollment flex
+F19,FLEX,Base Fixed,None,None,None,Available,Wallet (Grade-Based),-,-,Wallet,No,No,Yes,Yes,Conditional,Base Fixed (Grade-based wallet) | Grade-based wallet amount
+F20,FLEX,Base Fixed,None,None,None,Wellness Products,Wallet,-,-,Wallet (Restricted),No,No,Yes,Optional,Yes,Base Fixed + Wellness products | Wallet for wellness products

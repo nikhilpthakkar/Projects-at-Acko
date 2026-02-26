@@ -136,6 +136,8 @@ L0 (Welcome) --> L1 (Coverage) --> L2 (Family) --> L3 (Plans)* --> L4 (Enhance)*
 
 ### Layout -- MODULAR
 
+> Note: In v3, Modular "Top-Up" is renamed to "Tier Upgrade". M01 and M07 are view-only (no upgrade option).
+
 1. **Back button**
 2. **Headline**: "Upgrade your plan"
 3. **Tier Cards** (3 stacked):
@@ -154,11 +156,20 @@ L0 (Welcome) --> L1 (Coverage) --> L2 (Family) --> L3 (Plans)* --> L4 (Enhance)*
 5. **Family Coverage** -- Radio list: Self only, Self + Spouse, Self + Family, Self + Family + Parents
 6. **Premium impact** -- "₹X from wallet"
 
+### Layout -- FLEX (Base Fixed)
+
+1. **Back button**
+2. **Headline**: "Your base coverage"
+3. **Coverage Card** (C02, view-only) -- Fixed base plan details
+4. **Wallet Bar** (C10, banner) -- Shows full balance available for enhancements
+5. **Info text**: "Use your wallet for enhancements in the next step"
+
 ### Construct Variations
 
 | Element | VANILLA | MODULAR | FLEX |
 |---------|---------|---------|------|
-| Visibility | SKIP | Show | Show |
+| Visibility | SKIP | Show (Tier Upgrade: decision / View-only: M01, M07) | Show (Base Variable: decision / Base Fixed: view) |
+| Base type | N/A | Tier-Selectable | Base Variable: configure SI+family / Base Fixed: view + wallet for enhancements |
 | Selector type | N/A | 3 tier cards | SI buttons + family radios |
 | Pricing | N/A | Monthly upgrade delta | Wallet deduction |
 
@@ -192,8 +203,9 @@ L0 (Welcome) --> L1 (Coverage) --> L2 (Family) --> L3 (Plans)* --> L4 (Enhance)*
    - OPD Cover: ₹15,000/year, ₹2,400/yr, POPULAR badge
    - Dental & Vision: ₹10,000/year, ₹1,800/yr
    - Wellness Program: Health checkups, ₹1,200/yr
-7. **Add-on error** (conditional) -- "OPD requires Sum Insured >= ₹5L"
-8. **Enhancement total** -- "₹X/yr"
+7. **Parental Enhancement** (conditional, EC02) -- If parents added in L2 but not in base config: Pre-selected enhancement card with purple "Added in Family" badge. Shows parental premium.
+8. **Add-on error** (conditional) -- "OPD requires Sum Insured >= ₹5L"
+9. **Enhancement total** -- "₹X/yr"
 
 ### CTA
 
@@ -262,6 +274,8 @@ L0 (Welcome) --> L1 (Coverage) --> L2 (Family) --> L3 (Plans)* --> L4 (Enhance)*
 5. **Error message** (if validation fails)
 6. **Pre-enrollment banner** (if preEnroll): Blue-200, "Pre-enrollment: preferences only, not final"
 7. **Min participation banner** (if minPart): Orange-100, "E-card pending minimum participation"
+8. **Incomplete enrollment banner** (EC-NEW-02): Info banner: "Complete all steps — your selections are only saved on submission"
+9. **Component-level min part** (v3): Separate orange-100 banners per component (TopUp / Secondary / Add-ons) instead of a single policy-level banner
 
 ### CTA
 
@@ -291,6 +305,7 @@ L0 (Welcome) --> L1 (Coverage) --> L2 (Family) --> L3 (Plans)* --> L4 (Enhance)*
 | Config Flag | Headline | Message | E-card Shown |
 |-------------|----------|---------|--------------|
 | Default | Enrollment Confirmed! | E-card generated | Yes |
-| preEnroll | Preferences Submitted! | Preferences recorded | No |
-| minPart | Enrollment Confirmed! | Pending min participation | No |
+| preEnroll | Preferences Submitted! | Preferences recorded for upcoming window | No |
+| minPart (component) | Enrollment Confirmed! | [Component] pending min participation | No (per-component) |
 | cdCheck | Enrollment Confirmed! | CD check in progress | No |
+| Re-enrollment (EC-NEW-04) | Enrollment Updated! | Previous enrollment superseded | Yes |

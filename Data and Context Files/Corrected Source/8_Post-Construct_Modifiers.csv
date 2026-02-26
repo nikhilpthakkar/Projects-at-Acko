@@ -1,0 +1,12 @@
+POST-CONSTRUCT MODIFIERS - DETAILED REFERENCE,,,,,
+These modifiers affect UI/content but do NOT create new combination IDs. They are tracked in Sheet 1 but detailed here.,,,,,
+Modifier,Applies To,Options,UI Impact,Content Variation,Layers Affected
+Min Participation,TopUp / Secondary / Add-ons (NOT Base),Yes / No / Optional,Pending badge on selection,"""Subject to X% enrollment""","L4, L6, Success"
+Pre-Enrollment,Entire enrollment flow,Yes / No,"Different CTA, success state","""Submit Preferences"" vs ""Confirm""","L6, Success"
+CD Balance Check,Employee-paid components,Yes / No / Optional,Loading/verification state,"""Verifying balance...""","L5, Success"
+Grade-Based,Plan availability,Yes / No,Filter plans by grade,"""Plans for Grade X""","L3, L4"
+E-Card Eligible,Post-enrollment outcome,Yes / Conditional / Pending,Success screen status,E-card messaging,Success
+KEY CHANGES:,,,,,
+"• Min Participation is now tracked at COMPONENT level (TopUp, Secondary, Add-ons) - NOT policy level",,,,,
+"• Base plan NEVER has min participation (employer-provided, auto-enrolled) - hence V20 removed",,,,,
+"• These columns remain in Sheet 1 for reference but behavior is per-component, not per-combination",,,,,

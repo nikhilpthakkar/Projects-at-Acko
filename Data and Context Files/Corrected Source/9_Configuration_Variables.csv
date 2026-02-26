@@ -1,0 +1,13 @@
+CONFIGURATION VARIABLES,,,
+ADD-ON VARIABLE (Per Image 1),,,
+Option,Description,UI Impact,Applies To
+"Yes, For Base Family Definition",Add-ons for base family only,Show add-ons in L4 for base family,All constructs
+"Yes, For Custom Family Definition",Add-ons for extended family,Add-ons with family selection,All constructs
+No Add-ons,No add-ons offered,Skip add-on section in L4,All constructs
+PAID BY VARIABLE (Per Image 2),,,
+Option,Description,UI Impact,Applies To
+Paid by Employer,100% employer funded,"""Included"" / ""Company Paid""",All components
+Not paid for by Employer,100% employee funded,"Show premium, salary deduction","TopUp, Secondary, Add-ons"
+Partially paid by Employer,Co-pay/subsidy model,Show both contributions,All components
+Wallet,From benefits wallet,Show wallet deduction,FLEX only
+Wallet-Employee,Wallet + employee overflow,Show wallet + overflow,FLEX only

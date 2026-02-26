@@ -1,0 +1,113 @@
+Layer,Layer Name,Core Question to Employee,Purpose,What Gets Decided,Triggers/Logic,UI Pattern/Components,Content Framework Data,VANILLA Notes,MODULAR Notes,FLEX Notes
+L0,Context & Welcome,"""What am I about to do and how long will it take?""","Set expectations, reduce anxiety, explain what's coming","None - Informational only
+• Set expectations
+• Explain what employer has provided
+• Prime for decisions ahead","Always shown as first screen
+Trigger: enrollment_start event","Welcome Card, Progress Stepper (horizontal), Process Overview, Time Estimate Badge","Headline: ""Let's set up your health coverage""
+Subtext by construct: V=""Review your benefits"" / M=""Choose your tier"" / F=""Build your coverage""
+Time estimate: ""~X minutes""
+Step count: ""Y steps ahead""","Simple: 4-5 steps
+""Review and confirm""","More steps: 5-6
+""Choose and confirm""","Most steps: 6-7
+""Build and confirm""
+Show wallet balance"
+L1,Base Coverage View,"""What protection do I already have?""","Show what employer provides, build trust and understanding","None - View only
+(Acknowledge coverage)
+• View base policy details
+• Understand Sum Insured
+• See covered members (self/family)
+• Acknowledge coverage""","Always shown
+Trigger: After L0 continue
+Data: base_plan_config","Coverage Card (view-only), SI Display, Family Covered List, Key Benefits Grid, Wallet Display (Flex only)","Headline: V/M=""Your coverage from [Company]"" / F=""Your benefits wallet""
+SI display: ""₹X lakh coverage""
+Family display: ""Covers: You + Spouse + Children""
+Benefits: Top 4-5 benefits with icons","Fixed coverage display
+""Provided by [Company]""","Show current tier
+""Your [Tier] plan""","Show wallet amount
+""₹X to build coverage""
+Wallet meter visual"
+L2,Family Configuration,"""Who is covered and are the details correct?""",Capture/confirm family members for coverage,"Member details confirmation
+Optional: Add new members
+• Add/confirm spouse
+• Add/confirm children
+• Decision: Include parents?
+• Decision: Include in-laws?""","If family_edit_allowed = true
+OR member_details_required = true
+Data: existing_members[], allowed_relationships[]","Member Card (compact), Member Form (modal/bottom-sheet), Relationship Dropdown, DOB Picker, Validation Messages","Headline: ""Your covered family members""
+Subtext: ""Review and update if needed""
+Add CTA: ""+ Add family member""
+Validation: ""DOB is required"", ""Select relationship""","Pre-filled if known
+Simple add/edit","May expand with tier change
+Note tier-specific family rules","Dynamic based on plan choice
+""Changes based on your selections"""
+L3,Plan Selection / Top Up,"""What level of coverage do I want?""",Allow user to choose/upgrade base plan configuration,"Plan tier selection (M)
+SI selection (F)
+Family definition (F)
+Cover variants (F)
+• Understand coverage gap
+• Decision: Buy Top-Up?
+• Select Top-Up amount
+• See premium impact""","If constructType = modular OR flex
+Skip for vanilla
+Data: available_plans[], current_selection","Plan Comparison Cards, Tier Selector (radio group), SI Dropdown, Family Definition Picker, Cover Variant Toggles, Premium Impact Display","M Headline: ""Upgrade your coverage""
+M Comparison: Tier benefit table
+F Headline: ""Configure your coverage""
+F Config: SI + Family dropdowns
+Premium: ""+₹X/month for upgrade""",N/A - Skip this layer,"Tier comparison cards
+Price delta display
+""Upgrade for ₹X more""","Full configuration UI
+SI + Family + Variants
+Wallet impact display"
+L4,Enhancement Options / Secondary Coverage + Add Ons,"""What additional protection do I want?""","Offer top-ups, secondary plans, add-ons","Top-up selection
+Secondary plan selection
+Add-on selection (multi)
+• Understand why separate policy
+• Add parent details
+• Decision: Top-Up on Secondary?
+• See premium for parents""
+
+""• View available add-ons
+• Decision: Select Maternity?
+• Decision: Select OPD?
+• Decision: Select Dental/Vision?
+• Decision: Select Wellness?""","If any optional component exists:
+topUp.available = true OR
+secondary.available = true OR
+addOns.available = true","Top-up Card, Secondary Plan Card, Add-on Toggle Cards, Plan Comparison Modal, Premium Calculator (inline)","Headline: ""Enhance your coverage""
+Subtext: V=""Add more protection"" / F=""Use your wallet""
+Section headers: ""Top-ups"", ""Family plans"", ""Add-ons""
+Each card: Name + Benefit + Price + CTA","Standard cards
+Simple toggle/select","Modular top-ups as tier cards
+Secondary if available","Wallet-aware pricing
+""₹X from wallet""
+Remaining balance display"
+L5,Premium & Payment,"""How much will I pay and how?""","Show total cost, payment breakdown, get commitment","Confirm payment amount
+Acknowledge deduction method
+
+""• Full coverage summary
+• Total premium breakdown
+• Employer vs Employee split
+• Payment confirmation
+• E-card download""","If any employee_payment_required:
+employee_payable > 0
+Skip if all employer-paid","Premium Breakdown Card, Employer/Employee Split Visual, Payment Method Info, Salary Deduction Details, Consent for Payment","Headline: ""Your investment""
+Breakdown: ""Base: ₹X, Top-up: ₹Y, Add-ons: ₹Z""
+Split: ""[Company] pays: ₹A | You pay: ₹B""
+Deduction: ""₹B/month from salary""","Simple total if any
+Often skipped","Upgrade cost only
+""₹X/month extra""","Wallet + overflow
+""Wallet: ₹W | You pay: ₹P""
+Clear if within wallet"
+L6,Review & Consent,"""Is everything correct? Do I agree to proceed?""","Final confirmation, legal consent, submission","Confirm all selections
+Provide legal consent
+Submit enrollment","Always shown as final screen
+Trigger: All previous layers complete
+Data: all_selections, consent_required[]","Review Summary Card (expandable sections), Dependent List, Selection List, Consent Checkboxes, Submit CTA (primary), Edit Links","Headline: ""Review and confirm""
+Sections: ""Your coverage"", ""Family members"", ""Your investment""
+Consent: ""[checkbox] I agree to terms...""
+CTA: ""Confirm enrollment""
+Edit: ""Edit"" link per section","Simple review
+Basic consent","Include tier selected
+Upgrade confirmation","Include all configurations
+Wallet usage summary
+Overflow consent if needed"

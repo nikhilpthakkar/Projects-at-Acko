@@ -1,22 +1,34 @@
 Error ID,Layer,Error Name,User Message,Severity,Trigger Condition,UI Treatment
 E-L0-01,L0,Session expired,Please refresh to continue.,critical,Session timeout,Full-screen blocking overlay with refresh CTA
+E-L0-02,L0,Incomplete enrollment warning,Complete all steps to confirm your enrollment,info,Always on L0 (EC-NEW-02),Full-width banner below welcome card
 E-L1-01,L1,Policy data unavailable,Unable to load coverage details.,critical,API failure,Error banner replacing coverage card
 E-L2-01,L2,DOB required,Date of birth is required,validation,Missing DOB input,Inline error below DOB field with red border
 E-L2-02,L2,Max dependents,Maximum dependents reached,warning,6 members already added,Orange banner and add button disabled
 E-L2-03,L2,Age limit,Parent age exceeds limit (80 years),validation,Parent age > 80,Inline error in add member form
+E-L2-04,L2,Dependent selection required,Please select which dependents to cover under this policy,info,Data mismatch (EC-NEW-01),Selection UI modal/bottom-sheet
+E-L2-05,L2,Parent inline premium,Parents not covered under base plan. Additional premium: ₹X/year,info,Parent added but not in base config (EC02),Inline message below parent member card
 E-L3-01,L3,Selection required,Please select a plan to continue,validation,No tier/SI selected,CTA disabled with inline message below selector
 E-L3-02,L3,Wallet exceeded,Selections exceed wallet balance,warning,Total > ₹25000 wallet,Wallet bar turns cerise with overflow warning
 E-L3-03,L3,Grade restriction,Not available for your grade,blocking,Grade mismatch,Tier card greyed out and disabled
+E-L3-04,L3,Downgrade warning,Selecting a lower plan reduces your coverage,warning,User selects lower tier/SI,Warning text below plan cards
 E-L4-01,L4,Eligibility failed,Add-on requires base SI >= 7L,blocking,SI below threshold,Add-on card disabled with error below
 E-L4-02,L4,Premium calc failed,Unable to calculate premium,critical,Calculation error,Error banner replacing premium display
+E-L4-03,L4,Parental coverage pre-selected,Parental coverage added based on L2 family configuration,info,Parent added in L2 not in base (EC02),Pre-selected enhancement card with purple badge
 E-L5-01,L5,CD balance insufficient,E-card may be delayed,warning,Low CD balance,Info banner on premium page
 E-L5-02,L5,Wallet overflow,Consent for salary deduction required,warning,Total > wallet,Orange alert card with overflow amount
+E-L5-03,L5,Subsidy display,Subsidized by [Company]: ₹X,info,Partial employer payment,Subsidy percentage highlighted in premium card
 E-L6-01,L6,Consent required,Accept terms to proceed,validation,Checkbox unchecked,Checkbox border turns cerise with error message
 E-L6-02,L6,Submission failed,Unable to submit. Please retry.,critical,API failure,Error banner with Retry CTA
-E-L6-03,L6,Min participation pending,E-card pending threshold,info,minPart flag true,Blue info banner below consents
+E-L6-03,L6,Min participation pending (policy),E-card pending threshold,info,minPart flag true (legacy),Blue info banner below consents
+E-L6-04a,L6,Min participation pending (TopUp),Top-up selection pending minimum enrollment,info,minPart_topUp flag true,Orange-100 banner for top-up component
+E-L6-04b,L6,Min participation pending (Secondary),Secondary plan pending minimum enrollment,info,minPart_secondary flag true,Orange-100 banner for secondary component
+E-L6-04c,L6,Min participation pending (Add-ons),Add-on selections pending minimum enrollment,info,minPart_addOns flag true,Orange-100 banner for add-ons component
+E-ALL-01,ALL,Drop-off exit warning,Your selections won't be saved until you complete all steps,warning,User attempts exit (EC-NEW-03),Modal dialog on back nav / app close
+E-ALL-02,ALL,Re-enrollment override,New selections will override your current enrollment,warning,User restarts after completion (EC-NEW-04),Modal dialog with current selections summary
 RT-L2-01,L2,No members,At least one member required,validation,Submit with 0 members,Inline error below member list
 RT-L2-02,L2,Form invalid,Name and relation are required,validation,Empty name/relation in add form,Inline error in add form
 RT-L2-03,L2,Max members,Maximum 6 members allowed,validation,Try adding 7th member,Inline error in add form
 RT-L2-04,L2,Parent age exceeded,Parent age cannot exceed 80 years,validation,Parent age > 80 in form,Inline error in add form
 RT-L2-05,L2,Child age exceeded,Child age cannot exceed 25 years,validation,Child age > 25 in form,Inline error in add form
+RT-L2-06,L2,Dependent selection,Please select which [N] [relation] to cover,info,Data shows more dependents than allowed (EC-NEW-01),Selection UI
 RT-L4-01,L4,OPD eligibility,OPD requires Sum Insured >= ₹5L,blocking,Toggle OPD with SI=3L (Flex),Inline error below add-ons section

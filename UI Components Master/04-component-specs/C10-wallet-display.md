@@ -101,3 +101,14 @@ Just the thin progress bar, no labels.
 - Progress bar: two nested rectangles (track + fill), fill width as percentage
 - State property: normal / exceeded (changes colors)
 - The banner variant is the most visually prominent -- use as hero element on Flex screens
+
+---
+
+## Base Variable vs Base Fixed (v3)
+
+| Flex Base Type | Wallet Variants Used | Context |
+|---------------|---------------------|---------|
+| Base Variable (F01-F05, F11-F15) | `banner`, `detailed`, `inline`, `mini` — all 4 variants | Employee configures SI, family. Wallet shows real-time impact. |
+| Base Fixed (F06-F10, F16-F20) | `banner`, `inline` — 2 variants only | Fixed base plan. Wallet shown for enhancement spending only. |
+
+Note: Base Fixed does not need `detailed` or `mini` variants because the base plan cost is fixed — wallet changes only come from L4 enhancements.
