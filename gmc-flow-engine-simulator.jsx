@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ChevronRight, ChevronDown, ChevronLeft, AlertCircle, Upload, Play, Download, Eye, List, GitBranch, FileText, Settings, Users, CreditCard, Shield, Heart, CheckCircle2, Circle, ArrowRight, ArrowLeft, Info, Search, Smartphone, Layers, Zap, X, AlertTriangle, Loader2, ToggleLeft, ToggleRight, Tag, Hash, Wallet, Star, Target, Clock, Phone, Monitor, ChevronUp, Plus, Minus, Trash2, PartyPopper, RefreshCw } from 'lucide-react';
 
 // ============================================================================
@@ -186,17 +186,45 @@ const FlowEngine = {
     scenarios.push({id:`${comboId}-ECARD-01`,name:'E-card Generation',type:'system',steps:[{action:'Submit',expected:hasMinPart?'Pending (component-level)':config.cdCheck?'CD check initiated':'E-card generated'},{action:'View success',expected:'Correct status'}],priority:'P0'});
     return scenarios;
   },
-  getContentRequirements:(config,layer)=>{
+  getContentRequirements:(config,layer,tone)=>{
     const c={headline:'',subtext:'',cta_primary:'',cta_secondary:'',tooltips:[],anxiety_reducers:[]};
-    const cp={VANILLA:{verb:'Review'},MODULAR:{verb:'Choose'},FLEX:{verb:'Build'}}[config.construct];
+    const t=tone||({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]);
     switch(layer){
-      case'L0':c.headline="Let's set up your health coverage";c.subtext=config.construct==='FLEX'?'You have a benefits wallet to customize your protection':`${cp.verb} your benefits from [Company]`;c.cta_primary='Get Started';c.anxiety_reducers=['~5 minutes to complete','You can change selections later'];break;
-      case'L1':c.headline=config.construct==='FLEX'?'Your benefits wallet':'Your coverage from [Company]';c.subtext=config.construct==='FLEX'?'₹25,000 to build your protection':'₹5 lakh coverage for your family';c.cta_primary='Continue';c.tooltips=['Sum Insured','Floater','Cashless'];break;
-      case'L2':c.headline='Your covered family members';c.subtext='Review and update if needed';c.cta_primary='Continue';c.cta_secondary='+ Add family member';c.tooltips=['Dependent','Relationship'];break;
-      case'L3':if(config.construct==='MODULAR'){const isViewOnly=!config.topUp;c.headline=isViewOnly?'Your assigned plan':'Upgrade your plan';c.subtext=isViewOnly?'Review your coverage details':'Choose a higher tier for better benefits';}else if(config.construct==='FLEX'){const isBaseFixed=config.base==='base-fixed';c.headline=isBaseFixed?'Your base coverage':'Configure your coverage';c.subtext=isBaseFixed?'Your fixed coverage from [Company]':'Select Sum Insured and family coverage';}c.cta_primary='Continue';c.tooltips=['Tier','Sum Insured'];c.anxiety_reducers=['Compare plans side-by-side'];break;
-      case'L4':c.headline='Enhance your coverage';c.subtext=FlowEngine.hasEmployeePaidEnhancements(config)?'Add more protection (employee-paid)':'Additional benefits included';c.cta_primary='Continue';c.cta_secondary='Skip enhancements';c.tooltips=['Top-up','Secondary','Add-on'];c.anxiety_reducers=['Most popular choices highlighted'];break;
-      case'L5':c.headline='Your investment';c.subtext='Review your premium breakdown';c.cta_primary='Continue to Review';c.tooltips=['Premium','Salary Deduction'];if(config.construct==='FLEX')c.anxiety_reducers=['Wallet covers: ₹[X]','You pay: ₹[Y]'];break;
-      case'L6':c.headline='Review and confirm';c.subtext='Check your selections before submitting';c.cta_primary=config.preEnroll?'Submit Preferences':'Confirm Enrollment';c.cta_secondary='Edit selections';c.anxiety_reducers=['You can update during next enrollment window'];break;
+      case'L0':
+        if(t==='info'){c.headline='Set up your health coverage';c.subtext='Complete enrollment in a few steps';c.anxiety_reducers=['~5 minutes'];}
+        else if(t==='awareness'){c.headline="Let's set up your health coverage";c.subtext='Choose your benefits from [Company]';c.anxiety_reducers=['~5 minutes to complete','You can change selections later'];}
+        else{c.headline='[Company] health insurance: Build your plan';c.subtext='Your employer has set aside ₹25,000 for your health coverage. Use it to pick the plan that fits you best.';c.anxiety_reducers=['~5 minutes to complete','You can change selections later','Wallet gives you flexibility'];}
+        c.cta_primary=t==='persuasive'?'Start building your plan →':'Get Started';break;
+      case'L1':
+        if(t==='info'){c.headline='Your coverage';c.subtext='₹5 lakh Sum Insured';}
+        else if(t==='awareness'){c.headline='Your coverage from [Company]';c.subtext=config.construct==='FLEX'?'₹25,000 wallet to build your protection':'₹5 lakh coverage for your family';}
+        else{c.headline='Your benefits wallet';c.subtext='₹25,000 to build your health coverage';c.anxiety_reducers=['Amount [Company] set aside for your health benefits','Within this = no cost to you'];}
+        c.cta_primary=t==='persuasive'?'Customize your plan':'Continue';c.tooltips=['Sum Insured','Floater','Cashless'];break;
+      case'L2':
+        if(t==='info'){c.headline='Family members';c.subtext='Review covered members';}
+        else if(t==='awareness'){c.headline='Your covered family members';c.subtext='Review and update if needed';}
+        else{c.headline="Who's covered?";c.subtext='Add or update family members covered under your plan';c.anxiety_reducers=['Family changes affect wallet allocation'];}
+        c.cta_primary='Continue';c.cta_secondary='+ Add another member';c.tooltips=['Dependent','Relationship'];break;
+      case'L3':
+        if(config.construct==='MODULAR'){const isVO=!config.topUp;if(t==='info'){c.headline=isVO?'Assigned plan':'Select a tier';c.subtext=isVO?'Current plan details':'Available tiers';}else if(t==='awareness'){c.headline=isVO?'Your assigned plan':'Upgrade your plan';c.subtext=isVO?'Review your coverage details':'Choose a higher tier for better benefits';}else{c.headline=isVO?'Your assigned plan':'Unlock better protection';c.subtext=isVO?'Review your coverage details':'See how upgrading your tier expands your coverage';}}
+        else if(config.construct==='FLEX'){const isBF=config.base==='base-fixed';if(t==='info'){c.headline=isBF?'Base coverage':'Configure coverage';c.subtext=isBF?'Fixed plan details':'Select SI and family';}else if(t==='awareness'){c.headline=isBF?'Your base coverage':'Configure your coverage';c.subtext=isBF?'Your fixed coverage from [Company]':'Select Sum Insured and family coverage';}else{c.headline=isBF?'Your base plan':'Configure your coverage';c.subtext=isBF?'Fully covered by your wallet':'Choose your coverage amount and who\'s covered. Selections within your wallet are free.';c.anxiety_reducers=['Compare plans side-by-side','Every choice updates your wallet in real-time'];}}
+        else{if(t==='info'){c.headline='Your plan';c.subtext='Plan details';}else if(t==='awareness'){c.headline='Your plan from [Company]';c.subtext='Review your coverage details';}else{c.headline='Your plan from [Company]';c.subtext='Review your coverage details';}}
+        c.cta_primary='Continue';c.tooltips=['Tier','Sum Insured'];break;
+      case'L4':
+        if(t==='info'){c.headline='Enhancements';c.subtext='Additional options';}
+        else if(t==='awareness'){c.headline='Enhance your coverage';c.subtext=FlowEngine.hasEmployeePaidEnhancements(config)?'Add protection (employee-paid)':'Additional benefits included';}
+        else{c.headline='Add extra benefits';c.subtext='Optional benefits you can add to your plan. Pick what matters to you.';c.anxiety_reducers=['Most popular choices highlighted'];}
+        c.cta_primary=t==='persuasive'?'Continue to review':'Continue';c.cta_secondary=t==='persuasive'?'Skip for now':'Skip enhancements';c.tooltips=['Top-up','Secondary','Add-on'];break;
+      case'L5':
+        if(t==='info'){c.headline='Premium';c.subtext='Cost breakdown';}
+        else if(t==='awareness'){c.headline='Your investment';c.subtext='Review your premium breakdown';}
+        else{c.headline='Your cost';c.subtext=config.construct==='FLEX'&&!FlowEngine.hasEmployeePaidEnhancements(config)?'Total covered by your wallet — no cost to you':'Wallet: ₹25,000 · See your breakdown below';}
+        c.cta_primary='Continue to Review';c.tooltips=['Premium','Salary Deduction'];if(t==='persuasive')c.anxiety_reducers=['Wallet covers your base','You only pay the overflow'];break;
+      case'L6':
+        if(t==='info'){c.headline='Confirm';c.subtext='Review selections';}
+        else if(t==='awareness'){c.headline='Review and confirm';c.subtext='Check your selections before submitting';}
+        else{c.headline='Review your selections';c.subtext="Here's a summary of your coverage. Review everything before confirming.";}
+        c.cta_primary=config.preEnroll?'Submit Preferences':'Confirm Enrollment';c.cta_secondary=t==='persuasive'?'Go back and edit':'Edit selections';c.anxiety_reducers=t==='info'?[]:['You can update during next enrollment window'];break;
     }
     return c;
   }
@@ -206,19 +234,33 @@ const FlowEngine = {
 // RFQ MATCHING ENGINE
 // ============================================================================
 const RFQEngine = {
-  matchCombinations:(rfq)=>{const r=[];Object.entries(POLICY_COMBINATIONS).forEach(([id,config])=>{const{score,matches,mismatches}=RFQEngine.scoreMatch(rfq,config);if(score>0)r.push({comboId:id,config,score,matches,mismatches,name:config.name});});return r.sort((a,b)=>b.score-a.score);},
+  matchCombinations:(rfq, exactOnly=true)=>{
+    const r=[];
+    Object.entries(POLICY_COMBINATIONS).forEach(([id,config])=>{
+      const{score,matches,mismatches}=RFQEngine.scoreMatch(rfq,config);
+      if(exactOnly ? score===100 : score>0) r.push({comboId:id,config,score,matches,mismatches,name:config.name});
+    });
+    return r.sort((a,b)=>b.score-a.score);
+  },
   scoreMatch:(rfq,config)=>{
     let s=0,mx=0;const m=[],mm=[];
-    if(rfq.construct&&rfq.construct!=='any'){mx+=25;if(rfq.construct===config.construct){s+=25;m.push(`Construct: ${config.construct}`);}else mm.push(`Construct: wanted ${rfq.construct}`);}
-    if(rfq.topUp!=='any'){mx+=15;const w=rfq.topUp==='yes',h=!!config.topUp;if(w===h){s+=15;m.push(h?`Top-up: ${config.topUp}`:'No top-up');}else mm.push(w?'Missing top-up':'Has unwanted top-up');}
-    if(rfq.secondary!=='any'){mx+=15;const w=rfq.secondary==='yes',h=!!config.secondary;if(w===h){s+=15;m.push(h?`Secondary: ${config.secondary}`:'No secondary');}else mm.push(w?'Missing secondary':'Has unwanted secondary');}
-    if(rfq.addOns!=='any'){mx+=10;const w=rfq.addOns==='yes',h=!!config.addOns;if(w===h){s+=10;m.push(h?'Add-ons available':'No add-ons');}else mm.push(w?'Missing add-ons':'Has unwanted add-ons');}
-    if(rfq.paymentModel&&rfq.paymentModel!=='any'){mx+=15;const ep=FlowEngine.hasEmployeePayment(config);if(rfq.paymentModel==='employer-only'&&!ep){s+=15;m.push('All employer-paid');}else if(rfq.paymentModel==='employee-involved'&&ep){s+=15;m.push('Employee payment');}else if(rfq.paymentModel==='wallet'&&config.basePay?.includes('wallet')){s+=15;m.push('Wallet-based');}else mm.push(`Payment mismatch`);}
-    if(rfq.minPart!=='any'&&rfq.minPart!==undefined){mx+=5;const w=rfq.minPart==='yes';const hasMP=config.minPart_topUp||config.minPart_secondary||config.minPart_addOns;if(w===hasMP){s+=5;m.push(`Min Participation: ${w?'Yes':'No'}`);}else mm.push('Min Participation mismatch');}
+    // Group 1: Construct Parameters
+    if(rfq.construct&&rfq.construct!=='any'){mx+=20;if(rfq.construct===config.construct){s+=20;m.push(`Construct: ${config.construct}`);}else mm.push(`Construct: wanted ${rfq.construct}`);}
+    if(rfq.base&&rfq.base!=='any'){mx+=10;if(rfq.base===config.base){s+=10;m.push(`Base: ${config.base}`);}else mm.push(`Base mismatch`);}
+    if(rfq.topUp!=='any'){mx+=10;const w=rfq.topUp==='none'?null:rfq.topUp;if(w===null?!config.topUp:config.topUp===w){s+=10;m.push(config.topUp?`Top-up: ${config.topUp}`:'No top-up');}else mm.push(config.topUp?`Has top-up: ${config.topUp}`:'No top-up');}
+    if(rfq.secondary!=='any'){mx+=10;const w=rfq.secondary==='none'?null:rfq.secondary;if(w===null?!config.secondary:config.secondary===w){s+=10;m.push(config.secondary?`Secondary: ${config.secondary}`:'No secondary');}else mm.push(config.secondary?`Has secondary: ${config.secondary}`:'No secondary');}
+    if(rfq.addOns!=='any'){mx+=10;const w=rfq.addOns==='none'?null:rfq.addOns;if(w===null?!config.addOns:!!config.addOns){s+=10;m.push(config.addOns?'Add-ons: yes':'No add-ons');}else mm.push(config.addOns?'Has add-ons':'No add-ons');}
+    // Group 2: Payment Variables
+    if(rfq.basePay&&rfq.basePay!=='any'){mx+=10;if(rfq.basePay===config.basePay){s+=10;m.push(`Base pay: ${config.basePay}`);}else mm.push(`Base pay mismatch`);}
+    if(rfq.topUpPay&&rfq.topUpPay!=='any'){mx+=5;if((rfq.topUpPay==='none'?null:rfq.topUpPay)===(config.topUpPay||null)){s+=5;m.push(`TopUp pay: ${config.topUpPay||'N/A'}`);}else mm.push('TopUp pay mismatch');}
+    if(rfq.secPay&&rfq.secPay!=='any'){mx+=5;if((rfq.secPay==='none'?null:rfq.secPay)===(config.secPay||null)){s+=5;m.push(`Sec pay: ${config.secPay||'N/A'}`);}else mm.push('Sec pay mismatch');}
+    if(rfq.addOnPay&&rfq.addOnPay!=='any'){mx+=5;if((rfq.addOnPay==='none'?null:rfq.addOnPay)===(config.addOnPay||null)){s+=5;m.push(`AddOn pay: ${config.addOnPay||'N/A'}`);}else mm.push('AddOn pay mismatch');}
+    // Group 3: Post-Construct Modifiers
+    if(rfq.minPart!=='any'){mx+=5;const w=rfq.minPart==='yes';const hasMP=config.minPart_topUp||config.minPart_secondary||config.minPart_addOns;if(w===hasMP){s+=5;m.push(`Min Part: ${w?'Yes':'No'}`);}else mm.push('Min Part mismatch');}
     [{key:'preEnroll',label:'Pre-Enrollment'},{key:'cdCheck',label:'CD Check'},{key:'gradeBased',label:'Grade-Based'}].forEach(f=>{if(rfq[f.key]!=='any'&&rfq[f.key]!==undefined){mx+=5;const w=rfq[f.key]==='yes';if(w===config[f.key]){s+=5;m.push(`${f.label}: ${w?'Yes':'No'}`);}else mm.push(`${f.label} mismatch`);}});
     return{score:mx>0?Math.round((s/mx)*100):100,matches:m,mismatches:mm};
   },
-  getMatchLabel:(score)=>score>=90?{label:'Excellent',color:'text-green-700 bg-green-200'}:score>=75?{label:'Good',color:'text-blue-700 bg-blue-200'}:score>=60?{label:'Partial',color:'text-orange-700 bg-orange-200'}:{label:'Low',color:'text-cerise-700 bg-cerise-200'}
+  getMatchLabel:(score)=>score===100?{label:'Exact',color:'text-green-700 bg-green-200'}:score>=75?{label:'Close',color:'text-blue-700 bg-blue-200'}:score>=50?{label:'Partial',color:'text-orange-700 bg-orange-200'}:{label:'Low',color:'text-cerise-700 bg-cerise-200'}
 };
 
 // ============================================================================
@@ -298,13 +340,13 @@ const ComponentChecklist = ({ config, layers }) => {
   );
 };
 
-const TestScenarios = ({ scenarios }) => {
+const TestScenarios = ({ scenarios, onRunScenario }) => {
   const [exp,setExp] = useState(null);
   const tc = (t) => ({flow:'bg-blue-200 text-blue-700',premium:'bg-green-200 text-green-700',wallet:'bg-purple-200 text-purple-700',system:'bg-orange-200 text-orange-700'}[t]||'bg-onyx-200 text-onyx-700');
   return(
     <div className="acko-card p-6 bg-white">
       <h3 className="font-semibold mb-4 flex items-center gap-2 text-onyx-800"><FileText size={20} className="text-purple-600"/>Test Scenarios ({scenarios.length})</h3>
-      <div className="space-y-3">{scenarios.map(s=>(<div key={s.id} className="border border-onyx-300 rounded-xl overflow-hidden"><button onClick={()=>setExp(exp===s.id?null:s.id)} className="w-full flex items-center justify-between p-4 hover:bg-onyx-100 transition-colors text-left"><div className="flex items-center gap-3"><span className={`px-2 py-1 rounded text-xs font-medium ${tc(s.type)}`}>{s.type.toUpperCase()}</span><span className="font-medium text-onyx-800">{s.name}</span><span className={`text-xs px-2 py-0.5 rounded ${s.priority==='P0'?'bg-cerise-200 text-cerise-700':'bg-onyx-200 text-onyx-600'}`}>{s.priority}</span></div>{exp===s.id?<ChevronDown size={18}/>:<ChevronRight size={18}/>}</button>{exp===s.id&&(<div className="px-4 pb-4 bg-onyx-100"><div className="text-xs font-mono text-onyx-500 mb-3">{s.id}</div><div className="space-y-2">{s.steps.map((st,i)=>(<div key={i} className="flex gap-3 text-sm"><div className="w-6 h-6 rounded-full bg-onyx-300 text-onyx-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{i+1}</div><div className="flex-1"><div className="text-onyx-700">{st.layer&&<span className="font-medium text-onyx-900">[{st.layer}] </span>}{st.action}</div><div className="text-onyx-500 text-xs mt-0.5">→ {st.expected}</div></div></div>))}</div></div>)}</div>))}</div>
+      <div className="space-y-3">{scenarios.map(s=>(<div key={s.id} className="border border-onyx-300 rounded-xl overflow-hidden"><button onClick={()=>setExp(exp===s.id?null:s.id)} className="w-full flex items-center justify-between p-4 hover:bg-onyx-100 transition-colors text-left"><div className="flex items-center gap-3"><span className={`px-2 py-1 rounded text-xs font-medium ${tc(s.type)}`}>{s.type.toUpperCase()}</span><span className="font-medium text-onyx-800">{s.name}</span><span className={`text-xs px-2 py-0.5 rounded ${s.priority==='P0'?'bg-cerise-200 text-cerise-700':'bg-onyx-200 text-onyx-600'}`}>{s.priority}</span></div>{exp===s.id?<ChevronDown size={18}/>:<ChevronRight size={18}/>}</button>{exp===s.id&&(<div className="px-4 pb-4 bg-onyx-100"><div className="flex items-center justify-between mb-3"><div className="text-xs font-mono text-onyx-500">{s.id}</div>{onRunScenario&&<button onClick={()=>onRunScenario(s)} className="text-xs px-3 py-1.5 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-all flex items-center gap-1.5"><Play size={12}/>Run in Mobile</button>}</div><div className="space-y-2">{s.steps.map((st,i)=>(<div key={i} className="flex gap-3 text-sm"><div className="w-6 h-6 rounded-full bg-onyx-300 text-onyx-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{i+1}</div><div className="flex-1"><div className="text-onyx-700">{st.layer&&<span className="font-medium text-onyx-900">[{st.layer}] </span>}{st.action}</div><div className="text-onyx-500 text-xs mt-0.5">→ {st.expected}</div></div></div>))}</div></div>)}</div>))}</div>
     </div>
   );
 };
@@ -337,32 +379,48 @@ const ExportPanel = ({ config, comboId, layers, scenarios }) => {
 // RFQ BUILDER
 // ============================================================================
 const RFQBuilder = ({ onSelectCombo, onMatchResults }) => {
-  const [rfq, setRfq] = useState({construct:'any',topUp:'any',secondary:'any',addOns:'any',paymentModel:'any',minPart:'any',preEnroll:'any',cdCheck:'any',gradeBased:'any'});
+  const [rfq, setRfq] = useState({construct:'any',base:'any',topUp:'any',secondary:'any',addOns:'any',basePay:'any',topUpPay:'any',secPay:'any',addOnPay:'any',minPart:'any',preEnroll:'any',cdCheck:'any',gradeBased:'any'});
   const [results, setResults] = useState(null);
   const [showResults, setShowResults] = useState(false);
-  const handleMatch = () => { const m = RFQEngine.matchCombinations(rfq); setResults(m); setShowResults(true); if(onMatchResults)onMatchResults(m); };
+  const [exactMode, setExactMode] = useState(true);
+  const handleMatch = () => { const m = RFQEngine.matchCombinations(rfq, exactMode); setResults(m); setShowResults(true); if(onMatchResults)onMatchResults(m); };
+  const resetRfq = () => {setRfq({construct:'any',base:'any',topUp:'any',secondary:'any',addOns:'any',basePay:'any',topUpPay:'any',secPay:'any',addOnPay:'any',minPart:'any',preEnroll:'any',cdCheck:'any',gradeBased:'any'});setResults(null);setShowResults(false);};
   const Sel = ({label,value,onChange,options,icon:I}) => (<div><label className="block text-xs font-medium text-onyx-500 mb-1.5 flex items-center gap-1"><I size={12}/>{label}</label><select value={value} onChange={e=>onChange(e.target.value)} className="acko-input text-sm">{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></div>);
+  const payOpts=[{value:'any',label:'Any'},{value:'employer',label:'Employer'},{value:'employee',label:'Employee'},{value:'partial',label:'Partial'},{value:'wallet',label:'Wallet'},{value:'wallet-employee',label:'Wallet+Employee'},{value:'none',label:'None/N/A'}];
   return(
     <div className="space-y-6">
       <div className="acko-card p-6 bg-white">
-        <div className="flex items-center justify-between mb-6"><h3 className="font-semibold flex items-center gap-2 text-onyx-800"><Search size={20} className="text-purple-600"/>RFQ Policy Matcher</h3><button onClick={()=>{setRfq({construct:'any',topUp:'any',secondary:'any',addOns:'any',paymentModel:'any',minPart:'any',preEnroll:'any',cdCheck:'any',gradeBased:'any'});setResults(null);setShowResults(false);}} className="text-xs text-onyx-500 hover:text-purple-600 flex items-center gap-1"><X size={14}/>Reset</button></div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-          <Sel label="Construct" icon={Layers} value={rfq.construct} onChange={v=>setRfq(p=>({...p,construct:v}))} options={[{value:'any',label:'Any'},{value:'VANILLA',label:'VANILLA'},{value:'MODULAR',label:'MODULAR'},{value:'FLEX',label:'FLEX'}]}/>
-          <Sel label="Top-up" icon={Shield} value={rfq.topUp} onChange={v=>setRfq(p=>({...p,topUp:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/>
-          <Sel label="Secondary" icon={Users} value={rfq.secondary} onChange={v=>setRfq(p=>({...p,secondary:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/>
-          <Sel label="Add-ons" icon={Heart} value={rfq.addOns} onChange={v=>setRfq(p=>({...p,addOns:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/>
-          <Sel label="Payment" icon={CreditCard} value={rfq.paymentModel} onChange={v=>setRfq(p=>({...p,paymentModel:v}))} options={[{value:'any',label:'Any'},{value:'employer-only',label:'All Employer'},{value:'employee-involved',label:'Employee Pays Some'},{value:'wallet',label:'Wallet-Based'}]}/>
+        <div className="flex items-center justify-between mb-6"><h3 className="font-semibold flex items-center gap-2 text-onyx-800"><Search size={20} className="text-purple-600"/>RFQ Policy Matcher</h3><div className="flex items-center gap-4"><label className="flex items-center gap-2 cursor-pointer"><div onClick={()=>setExactMode(!exactMode)} className={`toggle-track ${exactMode?'on':'off'}`}><div className="toggle-thumb"/></div><span className="text-xs text-onyx-600">{exactMode?'Exact Match':'Explore Similar'}</span></label><button onClick={resetRfq} className="text-xs text-onyx-500 hover:text-purple-600 flex items-center gap-1"><X size={14}/>Reset</button></div></div>
+        {/* Group 1: Construct Parameters */}
+        <div className="mb-5"><div className="text-xs font-bold text-purple-700 uppercase tracking-wide mb-3 flex items-center gap-2"><Layers size={14}/>Construct Parameters</div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Sel label="Construct" icon={Layers} value={rfq.construct} onChange={v=>setRfq(p=>({...p,construct:v}))} options={[{value:'any',label:'Any'},{value:'VANILLA',label:'Vanilla'},{value:'MODULAR',label:'Modular'},{value:'FLEX',label:'Flex'}]}/>
+          <Sel label="Base Plan" icon={Shield} value={rfq.base} onChange={v=>setRfq(p=>({...p,base:v}))} options={[{value:'any',label:'Any'},{value:'fixed',label:'Fixed'},{value:'tier-selectable',label:'Tier-Selectable'},{value:'tier-selectable-grade',label:'Tier+Grade'},{value:'base-variable',label:'Base Variable'},{value:'base-fixed',label:'Base Fixed'}]}/>
+          <Sel label="Top-up" icon={Shield} value={rfq.topUp} onChange={v=>setRfq(p=>({...p,topUp:v}))} options={[{value:'any',label:'Any'},{value:'none',label:'None'},{value:'standard',label:'Standard'},{value:'tier-upgrade',label:'Tier Upgrade'},{value:'consolidated',label:'Consolidated'}]}/>
+          <Sel label="Secondary" icon={Users} value={rfq.secondary} onChange={v=>setRfq(p=>({...p,secondary:v}))} options={[{value:'any',label:'Any'},{value:'none',label:'None'},{value:'single',label:'Single'},{value:'multi',label:'Multiple'},{value:'si-variants',label:'SI Variants'}]}/>
+          <Sel label="Sec Top-up" icon={Shield} value={rfq.secTopUp||'any'} onChange={v=>setRfq(p=>({...p,secTopUp:v}))} options={[{value:'any',label:'Any'},{value:'none',label:'None'},{value:'standard',label:'Standard'}]}/>
+          <Sel label="Add-ons" icon={Heart} value={rfq.addOns} onChange={v=>setRfq(p=>({...p,addOns:v}))} options={[{value:'any',label:'Any'},{value:'none',label:'None'},{value:'available',label:'Available'},{value:'wellness',label:'Wellness'}]}/>
+        </div></div>
+        {/* Group 2: Payment Variables */}
+        <div className="mb-5"><div className="text-xs font-bold text-green-700 uppercase tracking-wide mb-3 flex items-center gap-2"><CreditCard size={14}/>Payment Variables</div><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Sel label="Base Paid By" icon={CreditCard} value={rfq.basePay} onChange={v=>setRfq(p=>({...p,basePay:v}))} options={payOpts}/>
+          <Sel label="TopUp Paid By" icon={CreditCard} value={rfq.topUpPay} onChange={v=>setRfq(p=>({...p,topUpPay:v}))} options={payOpts}/>
+          <Sel label="Secondary Paid By" icon={CreditCard} value={rfq.secPay} onChange={v=>setRfq(p=>({...p,secPay:v}))} options={payOpts}/>
+          <Sel label="AddOn Paid By" icon={CreditCard} value={rfq.addOnPay} onChange={v=>setRfq(p=>({...p,addOnPay:v}))} options={payOpts}/>
+        </div></div>
+        {/* Group 3: Post-Construct Modifiers */}
+        <div className="mb-6"><div className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-3 flex items-center gap-2"><Tag size={14}/>Post-Construct Modifiers</div><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Sel label="Min Participation" icon={Target} value={rfq.minPart} onChange={v=>setRfq(p=>({...p,minPart:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Required'},{value:'no',label:'Not Required'}]}/>
           <Sel label="Pre-Enrollment" icon={Clock} value={rfq.preEnroll} onChange={v=>setRfq(p=>({...p,preEnroll:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/>
+          <Sel label="CD Check" icon={CreditCard} value={rfq.cdCheck} onChange={v=>setRfq(p=>({...p,cdCheck:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/>
           <Sel label="Grade-Based" icon={Tag} value={rfq.gradeBased} onChange={v=>setRfq(p=>({...p,gradeBased:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/>
-        </div>
-        <button onClick={handleMatch} className="acko-btn bg-purple-600 text-white hover:bg-purple-700 px-8 font-semibold"><Search size={16} className="mr-2"/>Find Matching Combinations</button>
+        </div></div>
+        <div className="flex items-center gap-4"><button onClick={handleMatch} className="acko-btn bg-purple-600 text-white hover:bg-purple-700 px-8 font-semibold"><Search size={16} className="mr-2"/>Find Matching Combinations</button><span className="text-xs text-onyx-400">{exactMode?'Showing only 100% exact matches':'Showing all matches ranked by score'}</span></div>
       </div>
       {showResults&&results&&(
         <div className="acko-card p-6 bg-white fade-in-up">
-          <h3 className="font-semibold mb-4 flex items-center gap-2 text-onyx-800"><Zap size={20} className="text-purple-600"/>{results.length} Matches Found</h3>
-          {results.length===0?<div className="text-center py-8 text-onyx-500"><AlertCircle size={32} className="mx-auto mb-2 text-onyx-400"/><p>No matches. Try relaxing criteria.</p></div>:(
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">{results.map(r=>{const mi=RFQEngine.getMatchLabel(r.score);return(<button key={r.comboId} onClick={()=>onSelectCombo(r.comboId)} className="w-full text-left p-4 border border-onyx-300 rounded-xl hover:border-purple-400 hover:bg-purple-100 transition-all group"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-3"><span className="font-mono font-bold text-lg text-purple-700">{r.comboId}</span><span className={`px-2 py-1 rounded text-xs font-medium ${r.config.construct==='VANILLA'?'bg-green-200 text-green-700':r.config.construct==='MODULAR'?'bg-orange-200 text-orange-700':'bg-purple-200 text-purple-700'}`}>{r.config.construct}</span></div><div className="flex items-center gap-3"><span className={`px-3 py-1 rounded-full text-xs font-bold ${mi.color}`}>{r.score}% {mi.label}</span><ChevronRight size={18} className="text-onyx-400 group-hover:text-purple-600"/></div></div><div className="text-sm text-onyx-600 mb-2">{r.name}</div><div className="flex flex-wrap gap-1">{r.matches.slice(0,4).map((m,i)=><span key={i} className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full">{m}</span>)}{r.mismatches.slice(0,2).map((m,i)=><span key={i} className="text-[10px] px-2 py-0.5 bg-cerise-200 text-cerise-700 rounded-full">{m}</span>)}</div></button>);})}</div>
+          <h3 className="font-semibold mb-4 flex items-center gap-2 text-onyx-800"><Zap size={20} className="text-purple-600"/>{results.length} {exactMode?'Exact':''}  Match{results.length!==1?'es':''} Found</h3>
+          {results.length===0?<div className="text-center py-8 text-onyx-500"><AlertCircle size={32} className="mx-auto mb-2 text-onyx-400"/><p>{exactMode?'No exact matches. Try toggling "Explore Similar" or relaxing criteria.':'No matches found. Try relaxing criteria.'}</p></div>:(
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">{results.map(r=>{const mi=RFQEngine.getMatchLabel(r.score);return(<button key={r.comboId} onClick={()=>onSelectCombo(r.comboId)} className="w-full text-left p-4 border border-onyx-300 rounded-xl hover:border-purple-400 hover:bg-purple-100 transition-all group"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-3"><span className="font-mono font-bold text-lg text-purple-700">{r.comboId}</span><span className={`px-2 py-1 rounded text-xs font-medium ${r.config.construct==='VANILLA'?'bg-green-200 text-green-700':r.config.construct==='MODULAR'?'bg-orange-200 text-orange-700':'bg-purple-200 text-purple-700'}`}>{r.config.construct}</span></div><div className="flex items-center gap-3">{!exactMode&&<span className={`px-3 py-1 rounded-full text-xs font-bold ${mi.color}`}>{r.score}% {mi.label}</span>}<ChevronRight size={18} className="text-onyx-400 group-hover:text-purple-600"/></div></div><div className="text-sm text-onyx-600 mb-2">{r.name}</div><div className="flex flex-wrap gap-1">{r.matches.slice(0,5).map((m,i)=><span key={i} className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full">{m}</span>)}{r.mismatches.slice(0,3).map((m,i)=><span key={i} className="text-[10px] px-2 py-0.5 bg-cerise-200 text-cerise-700 rounded-full">{m}</span>)}</div></button>);})}</div>
           )}
         </div>
       )}
@@ -392,7 +450,7 @@ const WalletBar = ({ used, total, mini }) => {
   );
 };
 
-const MobileSimulator = ({ config, layers, comboId }) => {
+const MobileSimulator = ({ config, layers, comboId, pendingScenario, onScenarioConsumed }) => {
   const visibleLayers = useMemo(() => Object.entries(layers).filter(([_, v]) => v.show), [layers]);
   
   // Interactive state
@@ -415,12 +473,16 @@ const MobileSimulator = ({ config, layers, comboId }) => {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
   const [showAnnotations, setShowAnnotations] = useState(false);
+  const [contentTone, setContentTone] = useState({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]||'info');
+  const [simulatingError, setSimulatingError] = useState(null);
+  const [scenarioMode, setScenarioMode] = useState(null);
+  const [scenarioStep, setScenarioStep] = useState(0);
   
   const activeLayer = visibleLayers[idx]?.[0] || 'L0';
   const layerNames = visibleLayers.map(([l]) => LAYER_META[l]?.shortName || l);
   const state = { members, selectedTier, selectedSI, selectedFamilyDef, topUpEnabled, secondaryEnabled, addOns };
   const premium = useMemo(() => PremiumCalc.calculate(state, config), [members, selectedTier, selectedSI, topUpEnabled, secondaryEnabled, addOns, config]);
-  const content = useMemo(() => FlowEngine.getContentRequirements(config, activeLayer), [config, activeLayer]);
+  const content = useMemo(() => FlowEngine.getContentRequirements(config, activeLayer, contentTone), [config, activeLayer, contentTone]);
   const layerComps = useMemo(() => FlowEngine.getLayerComponents(config, activeLayer), [config, activeLayer]);
   const decisions = FlowEngine.getLayerDecision(config);
   
@@ -428,7 +490,7 @@ const MobileSimulator = ({ config, layers, comboId }) => {
   const configKey = comboId + config.construct;
   const [prevKey, setPrevKey] = useState(configKey);
   if (configKey !== prevKey) {
-    setPrevKey(configKey); setIdx(0); setSubmitted(false); setConsentTerms(false); setConsentSalary(false); setConsentWallet(false);
+    setPrevKey(configKey); setIdx(0); setSubmitted(false); setConsentTerms(false); setConsentSalary(false); setConsentWallet(false); setContentTone({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]||'info'); setSimulatingError(null); setScenarioMode(null); setScenarioStep(0);
     setTopUpEnabled(false); setSecondaryEnabled(false); setAddOns({ opd: false, dental: false, wellness: false });
     setSelectedTier(0); setSelectedSI('5L'); setSelectedFamilyDef(2); setErrors({});
     setMembers([{ id: 1, name: 'Employee', relation: 'Self', age: 32, gender: 'Male' }, { id: 2, name: 'Spouse', relation: 'Spouse', age: 30, gender: 'Female' }]);
@@ -449,7 +511,67 @@ const MobileSimulator = ({ config, layers, comboId }) => {
   const goNext = () => { if (activeLayer === 'L6') { if (validate()) setSubmitted(true); } else { if (validate()) setIdx(Math.min(visibleLayers.length - 1, idx + 1)); } };
   const goBack = () => { setIdx(Math.max(0, idx - 1)); setErrors({}); };
   const goToLayer = (i) => { if (i <= idx) { setIdx(i); setErrors({}); } };
-  const restart = () => { setIdx(0); setSubmitted(false); setConsentTerms(false); setConsentSalary(false); setConsentWallet(false); setErrors({}); };
+  const restart = () => { setIdx(0); setSubmitted(false); setConsentTerms(false); setConsentSalary(false); setConsentWallet(false); setErrors({}); setSimulatingError(null); setScenarioMode(null); };
+  
+  const simulateError = (err) => {
+    const layerNum = err.id.match(/E-L(\d)/)?.[1];
+    if (layerNum !== undefined) {
+      const targetLayer = `L${layerNum}`;
+      const layerIdx = visibleLayers.findIndex(([l]) => l === targetLayer);
+      if (layerIdx >= 0) setIdx(layerIdx);
+    }
+    setSimulatingError(err);
+    setTimeout(() => setSimulatingError(null), 6000);
+  };
+  
+  const runScenario = (scenario) => {
+    setScenarioMode(scenario); setScenarioStep(0); setSubmitted(false);
+    setConsentTerms(false); setConsentSalary(false); setConsentWallet(false);
+    setErrors({}); setSimulatingError(null);
+    if (scenario.type === 'wallet') {
+      setSelectedSI('15L'); setTopUpEnabled(true); setSecondaryEnabled(true);
+      setAddOns({ opd: true, dental: true, wellness: true }); setIdx(0);
+    } else if (scenario.type === 'premium') {
+      setTopUpEnabled(true); setSecondaryEnabled(false);
+      setAddOns({ opd: true, dental: false, wellness: false }); setIdx(0);
+    } else if (scenario.id?.includes('FLOW-02')) {
+      setIdx(0);
+    } else if (scenario.id?.includes('MP-01')) {
+      setIdx(0);
+    } else {
+      setIdx(0);
+    }
+  };
+  
+  const advanceScenario = () => {
+    if (!scenarioMode) return;
+    const nextStep = scenarioStep + 1;
+    if (nextStep < scenarioMode.steps.length) {
+      setScenarioStep(nextStep);
+      const step = scenarioMode.steps[nextStep];
+      if (step.layer) {
+        const li = visibleLayers.findIndex(([l]) => l === step.layer || step.layer.includes(l));
+        if (li >= 0) setIdx(li);
+      } else if (nextStep < visibleLayers.length) {
+        setIdx(Math.min(nextStep, visibleLayers.length - 1));
+      }
+      if (scenarioMode.type === 'wallet' && nextStep === 2) {
+        setErrors({ walletSim: 'Wallet overflow — consent required' });
+      }
+    } else {
+      if (scenarioMode.type === 'wallet' || scenarioMode.id?.includes('ECARD')) {
+        setSubmitted(true);
+      }
+      setScenarioMode(null); setScenarioStep(0);
+    }
+  };
+  
+  useEffect(() => {
+    if (pendingScenario && !scenarioMode) {
+      runScenario(pendingScenario);
+      onScenarioConsumed?.();
+    }
+  }, [pendingScenario]);
   
   const addMember = () => {
     if (!newMember.name || !newMember.relation) { setErrors({ addForm: 'Name and relation are required' }); return; }
@@ -478,12 +600,43 @@ const MobileSimulator = ({ config, layers, comboId }) => {
   // ---- RENDER SCREENS ----
   const Ann = ({ id }) => showAnnotations ? <span className="absolute -top-2 -right-2 z-10 px-1.5 py-0.5 bg-purple-600 text-white text-[9px] font-bold rounded-full annotation-pulse">{id}</span> : null;
   
+  const ErrorOverlay = () => simulatingError ? (
+    <div className="absolute inset-0 z-30 bg-black/10 flex items-end pointer-events-none fade-in-up">
+      <div className="w-full p-4 pointer-events-auto">
+        <div className={`rounded-xl p-4 shadow-lg border-2 ${simulatingError.severity === 'critical' ? 'bg-cerise-200 border-cerise-500' : simulatingError.severity === 'validation' ? 'bg-orange-100 border-orange-500' : simulatingError.severity === 'warning' ? 'bg-orange-100 border-orange-400' : simulatingError.severity === 'blocking' ? 'bg-cerise-200 border-cerise-700' : 'bg-blue-200 border-blue-500'}`}>
+          <div className="flex items-start gap-3">
+            <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${simulatingError.severity === 'critical' || simulatingError.severity === 'blocking' ? 'text-cerise-700' : simulatingError.severity === 'validation' || simulatingError.severity === 'warning' ? 'text-orange-700' : 'text-blue-700'}`} />
+            <div className="flex-1">
+              <div className="font-bold text-sm text-onyx-800">{simulatingError.error}</div>
+              <div className="text-xs text-onyx-600 mt-0.5">{simulatingError.message}</div>
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${simulatingError.severity === 'critical' ? 'bg-cerise-700' : simulatingError.severity === 'validation' ? 'bg-orange-700' : simulatingError.severity === 'warning' ? 'bg-orange-500' : simulatingError.severity === 'blocking' ? 'bg-cerise-700' : 'bg-blue-700'}`}>{simulatingError.severity.toUpperCase()}</span>
+                <span className="text-[10px] font-mono text-onyx-400">{simulatingError.id}</span>
+              </div>
+            </div>
+            <button onClick={() => setSimulatingError(null)} className="text-onyx-400 hover:text-onyx-600"><X size={16} /></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
+  
+  const ScenarioBanner = () => scenarioMode ? (
+    <div className="px-4 py-2 bg-purple-600 text-white flex items-center justify-between">
+      <div className="flex items-center gap-2"><Play size={14} /><span className="text-xs font-semibold">{scenarioMode.name}</span><span className="text-[10px] opacity-75">Step {scenarioStep + 1}/{scenarioMode.steps.length}</span></div>
+      <div className="flex items-center gap-2">
+        <button onClick={advanceScenario} className="text-[10px] px-2 py-1 bg-white text-purple-700 rounded font-bold">{scenarioStep >= scenarioMode.steps.length - 1 ? 'Finish' : 'Next →'}</button>
+        <button onClick={() => { setScenarioMode(null); setScenarioStep(0); }} className="text-white/70 hover:text-white"><X size={14} /></button>
+      </div>
+    </div>
+  ) : null;
+  
   const renderScreen = () => {
     if (submitted) return (
       <div className="px-5 py-8 text-center space-y-4 fade-in-up">
         <div className="w-20 h-20 rounded-full bg-green-200 flex items-center justify-center mx-auto"><CheckCircle2 size={40} className="text-green-700" /></div>
-        <h2 className="text-xl font-bold text-onyx-800">{config.preEnroll ? 'Preferences Submitted!' : 'Enrollment Confirmed!'}</h2>
-        <p className="text-sm text-onyx-500">{(config.minPart_topUp||config.minPart_secondary||config.minPart_addOns) ? 'Your enrollment is recorded. Some selections pending minimum participation.' : config.preEnroll ? 'Your preferences have been recorded for the upcoming policy period.' : config.cdCheck ? 'CD balance check in progress. E-card will be generated shortly.' : 'Your e-card has been generated successfully!'}</p>
+        <h2 className="text-xl font-bold text-onyx-800">{(config.minPart_topUp||config.minPart_secondary||config.minPart_addOns)?'Preferences submitted':(contentTone==='persuasive'?(config.preEnroll?'Your plan is active!':'You\'re covered!'):(config.preEnroll?'Preferences Submitted!':'Enrollment Confirmed!'))}</h2>
+        <p className="text-sm text-onyx-500">{(config.minPart_topUp||config.minPart_secondary||config.minPart_addOns)?'Your selections are saved. Coverage will activate once enrollment reaches the minimum threshold.':(contentTone==='persuasive'?(config.preEnroll?'Your preferences have been recorded. You\'ll be notified when enrollment opens.':config.cdCheck?'We\'re verifying a few details. Your e-card will be available once everything checks out.':'Your health insurance is active. Here\'s your e-card — save it for easy access at any hospital.'):(config.preEnroll?'Your preferences have been recorded for the upcoming policy period.':config.cdCheck?'CD balance check in progress. E-card will be generated shortly.':'Your e-card has been generated successfully!'))}</p>
         {!(config.minPart_topUp||config.minPart_secondary||config.minPart_addOns) && !config.cdCheck && !config.preEnroll && <div className="border border-green-200 rounded-xl p-4 bg-green-100"><div className="text-xs font-semibold text-green-700 mb-2">E-CARD READY</div><div className="bg-white rounded-lg p-3 border border-green-200"><div className="flex items-center gap-3"><Shield size={24} className="text-purple-600" /><div className="text-left"><div className="font-bold text-sm">ACKO Health</div><div className="text-xs text-onyx-500">Policy: GMC-{comboId}</div></div></div><div className="mt-2 text-xs text-onyx-500">UHID: UH{Date.now().toString().slice(-8)}</div></div></div>}
         {premium.employeePays > 0 && <div className="bg-onyx-100 rounded-xl p-3 text-sm text-onyx-700"><CreditCard size={16} className="inline mr-2" />₹{premium.monthlyEmployee}/month will be deducted from salary</div>}
         <button onClick={restart} className="acko-btn bg-purple-600 text-white hover:bg-purple-700 px-6 mx-auto"><RefreshCw size={16} className="mr-2" />Start Over</button>
@@ -660,7 +813,7 @@ const MobileSimulator = ({ config, layers, comboId }) => {
       <div className="flex-shrink-0">
         <div className="flex items-center justify-between mb-4 px-2" style={{ width: 375 }}>
           <div className="text-xs text-onyx-500">{activeLayer} - {LAYER_META[activeLayer]?.shortName} {submitted && '(Submitted)'}</div>
-          <button onClick={() => setShowAnnotations(!showAnnotations)} className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${showAnnotations ? 'bg-purple-600 text-white' : 'bg-onyx-200 text-onyx-600'}`}><Tag size={12} />{showAnnotations ? 'Hide IDs' : 'Show IDs'}</button>
+          <div className="flex items-center gap-2"><select value={contentTone} onChange={e=>setContentTone(e.target.value)} className={`px-2 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer ${contentTone==='info'?'bg-green-200 text-green-700':contentTone==='awareness'?'bg-orange-200 text-orange-700':'bg-purple-200 text-purple-700'}`}><option value="info">Info (Vanilla)</option><option value="awareness">Awareness (Modular)</option><option value="persuasive">Persuasive (Flex)</option></select><button onClick={() => setShowAnnotations(!showAnnotations)} className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${showAnnotations ? 'bg-purple-600 text-white' : 'bg-onyx-200 text-onyx-600'}`}><Tag size={12} />{showAnnotations ? 'Hide IDs' : 'Show IDs'}</button></div>
         </div>
         
         <div className="flex items-center gap-3">
@@ -691,8 +844,10 @@ const MobileSimulator = ({ config, layers, comboId }) => {
                   </div>
                 )}
                 
-                {/* Scrollable content */}
-                <div className="flex-1 overflow-y-auto mobile-scroll">{renderScreen()}</div>
+                {/* Scenario Banner */}
+                <ScenarioBanner />
+                {/* Scrollable content with error overlay */}
+                <div className="flex-1 overflow-y-auto mobile-scroll relative">{renderScreen()}<ErrorOverlay /></div>
                 
                 {/* Floating CTA */}
                 {!submitted && (
@@ -743,7 +898,7 @@ const MobileSimulator = ({ config, layers, comboId }) => {
         
         <div className="acko-card p-5 bg-white">
           <h4 className="font-semibold text-sm text-onyx-800 mb-3 flex items-center gap-2"><AlertCircle size={16} className="text-cerise-500" />Error States</h4>
-          <div className="space-y-2">{(LAYER_ERRORS[activeLayer] || []).map(err => (<div key={err.id} className="p-2 bg-onyx-100 rounded-lg"><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${err.severity === 'critical' ? 'bg-cerise-700' : err.severity === 'validation' ? 'bg-orange-700' : err.severity === 'warning' ? 'bg-orange-500' : 'bg-blue-700'}`}>{err.severity}</span><span className="text-xs font-mono text-onyx-400">{err.id}</span></div><div className="text-sm font-medium text-onyx-800 mt-1">{err.error}</div><div className="text-xs text-onyx-500">{err.message}</div></div>))}</div>
+          <div className="space-y-2">{(LAYER_ERRORS[activeLayer] || []).map(err => (<div key={err.id} className={`p-2 rounded-lg transition-all ${simulatingError?.id === err.id ? 'bg-cerise-200 ring-2 ring-cerise-500' : 'bg-onyx-100'}`}><div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${err.severity === 'critical' ? 'bg-cerise-700' : err.severity === 'validation' ? 'bg-orange-700' : err.severity === 'warning' ? 'bg-orange-500' : err.severity === 'blocking' ? 'bg-cerise-700' : 'bg-blue-700'}`}>{err.severity}</span><span className="text-xs font-mono text-onyx-400">{err.id}</span></div><button onClick={()=>simulateError(err)} className={`text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${simulatingError?.id === err.id ? 'bg-cerise-700 text-white' : 'bg-cerise-200 text-cerise-700 hover:bg-cerise-300'}`}><Play size={10}/>{simulatingError?.id === err.id ? 'Simulating...' : 'Simulate'}</button></div><div className="text-sm font-medium text-onyx-800 mt-1">{err.error}</div><div className="text-xs text-onyx-500">{err.message}</div></div>))}</div>
         </div>
       </div>
     </div>
@@ -794,6 +949,7 @@ export default function GMCFlowEngineSimulator() {
   const [analysisTab, setAnalysisTab] = useState('flow');
   const [customConfig, setCustomConfig] = useState(null);
   const [rfqMatches, setRfqMatches] = useState(null);
+  const [pendingScenario, setPendingScenario] = useState(null);
   
   const currentConfig = useMemo(() => (inputMode === 'preset' || inputMode === 'rfq') ? POLICY_COMBINATIONS[selectedCombo] : (customConfig || POLICY_COMBINATIONS.V01), [selectedCombo, inputMode, customConfig]);
   const layers = useMemo(() => FlowEngine.getLayerVisibility(currentConfig), [currentConfig]);
@@ -838,13 +994,13 @@ export default function GMCFlowEngineSimulator() {
           
           <div className="tab-content">
             {analysisTab === 'flow' && <div className="space-y-8"><FlowDiagram layers={layers} config={currentConfig} /><DecisionMatrix config={currentConfig} layers={layers} /></div>}
-            {analysisTab === 'mobile' && <div className="acko-card p-6 bg-white"><h3 className="font-semibold mb-6 flex items-center gap-2 text-onyx-800"><Smartphone size={20} className="text-purple-600" />Interactive Mobile Preview — {selectedCombo} ({currentConfig.construct})</h3><p className="text-sm text-onyx-500 mb-6">Click Continue to navigate, toggle add-ons, add family members, select plans. Real-time premium calculation and wallet tracking. All validations active.</p><MobileSimulator config={currentConfig} layers={layers} comboId={selectedCombo} /></div>}
-            {analysisTab === 'components' && <div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><ComponentChecklist config={currentConfig} layers={layers} /><TestScenarios scenarios={scenarios} /></div>}
+            {analysisTab === 'mobile' && <div className="acko-card p-6 bg-white"><h3 className="font-semibold mb-6 flex items-center gap-2 text-onyx-800"><Smartphone size={20} className="text-purple-600" />Interactive Mobile Preview — {selectedCombo} ({currentConfig.construct})</h3><p className="text-sm text-onyx-500 mb-6">Click Continue to navigate, toggle add-ons, add family members, select plans. Real-time premium calculation and wallet tracking. All validations active.</p><MobileSimulator config={currentConfig} layers={layers} comboId={selectedCombo} pendingScenario={pendingScenario} onScenarioConsumed={()=>setPendingScenario(null)} /></div>}
+            {analysisTab === 'components' && <div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><ComponentChecklist config={currentConfig} layers={layers} /><TestScenarios scenarios={scenarios} onRunScenario={(s)=>{setPendingScenario(s);setAnalysisTab('mobile');}} /></div>}
             {analysisTab === 'content' && <div className="space-y-8"><ContentRequirements config={currentConfig} layers={layers} /><ExportPanel config={currentConfig} comboId={inputMode==='preset'||inputMode==='rfq'?selectedCombo:'CUSTOM'} layers={layers} scenarios={scenarios} /></div>}
           </div>
         </main>
         
-        <footer className="bg-onyx-100 border-t border-onyx-300 py-6 mt-12"><div className="max-w-[1600px] mx-auto px-6 text-center text-onyx-500 text-sm">GMC Flow Engine Simulator v3.1 | 51 Combinations (20V + 11M + 20F) | Interactive Mobile Prototype + Real-time Validations</div></footer>
+        <footer className="bg-onyx-100 border-t border-onyx-300 py-6 mt-12"><div className="max-w-[1600px] mx-auto px-6 text-center text-onyx-500 text-sm">GMC Flow Engine Simulator v4.1 | 51 Combinations (20V + 11M + 20F) | Error Simulation on Mobile + Scenario Playback + Content Tone Pyramid</div></footer>
       </div>
     </>
   );
