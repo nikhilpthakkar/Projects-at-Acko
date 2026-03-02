@@ -600,38 +600,327 @@ const MobileSimulator = ({ config, layers, comboId, pendingScenario, onScenarioC
   // ---- RENDER SCREENS ----
   const Ann = ({ id }) => showAnnotations ? <span className="absolute -top-2 -right-2 z-10 px-1.5 py-0.5 bg-purple-600 text-white text-[9px] font-bold rounded-full annotation-pulse">{id}</span> : null;
   
-  const ErrorOverlay = () => simulatingError ? (
-    <div className="absolute inset-0 z-30 bg-black/10 flex items-end pointer-events-none fade-in-up">
-      <div className="w-full p-4 pointer-events-auto">
-        <div className={`rounded-xl p-4 shadow-lg border-2 ${simulatingError.severity === 'critical' ? 'bg-cerise-200 border-cerise-500' : simulatingError.severity === 'validation' ? 'bg-orange-100 border-orange-500' : simulatingError.severity === 'warning' ? 'bg-orange-100 border-orange-400' : simulatingError.severity === 'blocking' ? 'bg-cerise-200 border-cerise-700' : 'bg-blue-200 border-blue-500'}`}>
-          <div className="flex items-start gap-3">
-            <AlertCircle size={20} className={`flex-shrink-0 mt-0.5 ${simulatingError.severity === 'critical' || simulatingError.severity === 'blocking' ? 'text-cerise-700' : simulatingError.severity === 'validation' || simulatingError.severity === 'warning' ? 'text-orange-700' : 'text-blue-700'}`} />
-            <div className="flex-1">
-              <div className="font-bold text-sm text-onyx-800">{simulatingError.error}</div>
-              <div className="text-xs text-onyx-600 mt-0.5">{simulatingError.message}</div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${simulatingError.severity === 'critical' ? 'bg-cerise-700' : simulatingError.severity === 'validation' ? 'bg-orange-700' : simulatingError.severity === 'warning' ? 'bg-orange-500' : simulatingError.severity === 'blocking' ? 'bg-cerise-700' : 'bg-blue-700'}`}>{simulatingError.severity.toUpperCase()}</span>
-                <span className="text-[10px] font-mono text-onyx-400">{simulatingError.id}</span>
-              </div>
-            </div>
-            <button onClick={() => setSimulatingError(null)} className="text-onyx-400 hover:text-onyx-600"><X size={16} /></button>
-          </div>
+  const renderErrorScreen = (err) => {
+    const eid = err.id;
+    const sevColor = err.severity === 'critical' || err.severity === 'blocking' ? 'border-cerise-500 bg-cerise-200' : err.severity === 'validation' ? 'border-orange-500 bg-orange-100' : err.severity === 'warning' ? 'border-orange-400 bg-orange-100' : 'border-blue-400 bg-blue-200';
+    const sevText = err.severity === 'critical' || err.severity === 'blocking' ? 'text-cerise-700' : err.severity === 'validation' || err.severity === 'warning' ? 'text-orange-700' : 'text-blue-700';
+    const ErrBadge = () => (<div className="flex items-center gap-2 mt-2"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${err.severity==='critical'?'bg-cerise-700':err.severity==='validation'?'bg-orange-700':err.severity==='warning'?'bg-orange-500':err.severity==='blocking'?'bg-cerise-700':'bg-blue-700'}`}>{err.severity.toUpperCase()}</span><span className="text-[10px] font-mono text-onyx-400">{eid}</span></div>);
+    const DismissBtn = () => (<button onClick={()=>setSimulatingError(null)} className="text-xs text-onyx-500 underline mt-3">Dismiss simulation</button>);
+    
+    switch(eid) {
+      case 'E-L0-01': return (
+        <div className="px-5 py-8 text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-cerise-200 flex items-center justify-center mx-auto"><AlertCircle size={32} className="text-cerise-700" /></div>
+          <h2 className="text-lg font-bold text-onyx-800">Session Expired</h2>
+          <p className="text-sm text-onyx-500">Your session has timed out. Please refresh to continue your enrollment.</p>
+          <button className="acko-btn bg-purple-600 text-white px-6 mx-auto"><RefreshCw size={14} className="mr-2"/>Refresh</button>
+          <ErrBadge /><DismissBtn />
         </div>
-      </div>
-    </div>
-  ) : null;
+      );
+      case 'E-L0-02': return (
+        <div className="px-5 py-4 space-y-4">
+          <div className="flex items-center gap-2 mb-2"><div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center"><Shield size={16} className="text-white" /></div><span className="font-bold text-sm text-purple-800">acko health</span></div>
+          <div className={`border-2 ${sevColor} rounded-xl p-4`}><div className="flex items-center gap-2 mb-2"><AlertCircle size={16} className={sevText}/><span className={`font-semibold text-sm ${sevText}`}>Incomplete Enrollment</span></div><p className="text-xs text-onyx-600">You must complete all steps for your enrollment to be registered. Incomplete journeys will not be saved.</p></div>
+          <div className="bg-purple-100 rounded-xl p-3"><div className="text-xs font-semibold text-purple-700 mb-2">STEPS REMAINING</div>{visibleLayers.map(([l],i)=>(<div key={l} className={`flex items-center gap-2 py-1.5 text-sm ${i<=1?'text-green-700':'text-orange-700'}`}>{i<=1?<CheckCircle2 size={14} className="text-green-600"/>:<AlertCircle size={14} className="text-orange-500"/>}<span>{LAYER_META[l]?.name}</span>{i>1&&<span className="text-[10px] text-orange-500 ml-auto">Pending</span>}</div>))}</div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L1-01': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className={`border-2 border-cerise-500 rounded-xl p-4 bg-cerise-200`}>
+            <div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-lg bg-onyx-200 animate-pulse"/><div className="flex-1 space-y-2"><div className="h-4 bg-onyx-200 rounded animate-pulse w-3/4"/><div className="h-3 bg-onyx-200 rounded animate-pulse w-1/2"/></div></div>
+            <div className="flex items-center gap-2 mt-2"><AlertCircle size={14} className="text-cerise-700"/><span className="text-sm font-semibold text-cerise-700">Unable to load coverage details</span></div>
+            <button className="mt-3 text-xs text-purple-600 font-semibold underline">Retry</button>
+          </div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L2-01': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
+          <div className="border border-onyx-300 rounded-xl p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"><Users size={18} className="text-purple-600"/></div><div><div className="font-semibold text-sm text-onyx-800">Employee</div><div className="text-xs text-onyx-500">Self | 32 yrs | Male</div></div></div></div>
+          <div className="border-2 border-cerise-500 rounded-xl p-4 bg-cerise-200">
+            <div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center"><Users size={18} className="text-orange-600"/></div><div><div className="font-semibold text-sm text-onyx-800">Riya</div><div className="text-xs text-cerise-700 font-semibold">Child | DOB missing</div></div></div>
+            <div className="border-2 border-cerise-500 rounded-lg p-3 bg-white"><div className="text-[10px] font-semibold text-cerise-700 mb-1">DATE OF BIRTH <span className="text-cerise-500">*Required</span></div><div className="h-10 border-2 border-cerise-500 rounded-lg flex items-center px-3"><span className="text-sm text-cerise-400">DD/MM/YYYY</span></div><div className="text-[10px] text-cerise-700 mt-1 flex items-center gap-1"><AlertCircle size={10}/>Date of birth is required</div></div>
+          </div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L2-02': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          {[{n:'Employee',r:'Self'},{n:'Spouse',r:'Spouse'},{n:'Child 1',r:'Child'},{n:'Child 2',r:'Child'},{n:'Parent 1',r:'Parent'},{n:'Parent 2',r:'Parent'}].map((m,i)=>(<div key={i} className="border border-onyx-300 rounded-xl p-3"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center"><Users size={14} className="text-purple-600"/></div><div className="text-sm text-onyx-800">{m.n} <span className="text-onyx-400">({m.r})</span></div></div></div>))}
+          <div className={`border-2 ${sevColor} rounded-xl p-3`}><div className="flex items-center gap-2"><AlertCircle size={14} className={sevText}/><span className={`text-sm font-semibold ${sevText}`}>Maximum 6 members reached</span></div><p className="text-xs text-onyx-500 mt-1">Remove a member to add someone else</p></div>
+          <div className="w-full border-2 border-dashed border-onyx-200 rounded-xl py-4 text-sm text-onyx-400 flex items-center justify-center gap-2 cursor-not-allowed opacity-50"><Plus size={16}/>Add family member</div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L2-03': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border border-onyx-300 rounded-xl p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"><Users size={18} className="text-purple-600"/></div><div><div className="font-semibold text-sm text-onyx-800">Employee</div><div className="text-xs text-onyx-500">Self | 32 yrs</div></div></div></div>
+          <div className="border-2 border-cerise-500 rounded-xl p-4 bg-cerise-200">
+            <div className="text-sm font-semibold text-purple-700 mb-3">Add Family Member</div>
+            <input disabled value="Aditya" className="acko-input text-sm mb-2 bg-onyx-100" style={{height:40}}/>
+            <div className="acko-input text-sm mb-2 bg-onyx-100 flex items-center" style={{height:40}}>Parent</div>
+            <div className="flex gap-2 mb-2"><div className="flex-1 border-2 border-cerise-500 rounded-lg flex items-center px-3 bg-white" style={{height:40}}><span className="text-sm text-cerise-700 font-bold">85</span></div><div className="acko-input text-sm flex-1 bg-onyx-100 flex items-center" style={{height:40}}>Male</div></div>
+            <div className="text-xs text-cerise-700 flex items-center gap-1 mb-2"><AlertCircle size={12}/>Parent age cannot exceed 80 years</div>
+          </div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L2-04': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">Select dependents to cover</h2><p className="text-sm text-onyx-500 mt-0.5">Your plan covers 2 children. You have 3 on record. Please select which to include.</p></div>
+          <div className="border border-onyx-300 rounded-xl p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"><Users size={18} className="text-purple-600"/></div><div><div className="font-semibold text-sm">Employee</div><div className="text-xs text-onyx-500">Self — auto-included</div></div><CheckCircle2 size={16} className="text-green-600 ml-auto"/></div></div>
+          {[{n:'Arya',a:8,sel:true},{n:'Veer',a:5,sel:true},{n:'Riya',a:3,sel:false}].map((c,i)=>(<div key={i} className={`border-2 rounded-xl p-4 cursor-pointer ${c.sel?'border-purple-600 bg-purple-50':'border-onyx-300'}`}><div className="flex items-center gap-3"><div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${c.sel?'border-purple-600 bg-purple-600':'border-onyx-300'}`}>{c.sel&&<CheckCircle2 size={12} className="text-white"/>}</div><div><div className="font-semibold text-sm">{c.n}</div><div className="text-xs text-onyx-500">Child | {c.a} yrs</div></div></div></div>))}
+          <div className={`border-2 ${sevColor} rounded-xl p-3`}><div className="flex items-center gap-2"><Info size={14} className="text-blue-700"/><span className="text-sm text-blue-700">2 of 3 children selected (max 2 allowed)</span></div></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L2-05': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border border-onyx-300 rounded-xl p-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"><Users size={18} className="text-purple-600"/></div><div><div className="font-semibold text-sm">Employee</div><div className="text-xs text-onyx-500">Self | 32 yrs</div></div></div></div>
+          <div className="border-2 border-orange-400 rounded-xl p-4 bg-orange-100">
+            <div className="flex items-center gap-3 mb-2"><div className="w-10 h-10 rounded-full bg-orange-200 flex items-center justify-center"><Users size={18} className="text-orange-700"/></div><div><div className="font-semibold text-sm">Parent (Father)</div><div className="text-xs text-onyx-500">65 yrs | Male</div></div></div>
+            <div className="bg-orange-200 rounded-lg p-2 text-xs text-orange-800 flex items-center gap-2"><AlertTriangle size={14}/>Not in base plan — <span className="font-bold">+₹4,800/yr additional premium</span></div>
+            <div className="text-[10px] text-onyx-500 mt-2">Parent coverage available as enhancement in the next step</div>
+          </div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L3-01': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          {[{t:'Silver',s:'₹3L',p:'Included'},{t:'Gold',s:'₹5L',p:'+₹500/mo'},{t:'Platinum',s:'₹10L',p:'+₹1,200/mo'}].map((p,i)=>(<div key={i} className="border-2 border-dashed border-cerise-400 rounded-xl p-4 bg-cerise-200"><div className="flex justify-between"><div><span className="font-bold text-sm">{p.t}</span><div className="text-xs text-onyx-500">{p.s} Sum Insured</div></div><span className="text-sm font-bold text-onyx-600">{p.p}</span></div></div>))}
+          <div className={`border-2 ${sevColor} rounded-xl p-3`}><div className="flex items-center gap-2"><AlertCircle size={14} className={sevText}/><span className={`text-sm font-semibold ${sevText}`}>Please select a plan to continue</span></div></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L3-02': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">Configure your coverage</h2></div>
+          <div className="bg-gradient-to-r from-cerise-700 to-cerise-500 rounded-xl p-4 text-white"><div className="flex items-center gap-2 mb-2"><Wallet size={16}/><span className="text-sm font-semibold">Wallet Balance — EXCEEDED</span></div><div className="flex justify-between text-xs opacity-80 mb-1"><span>Used: ₹32,400</span><span>Wallet: ₹25,000</span></div><div className="w-full h-2 rounded-full bg-cerise-200"><div className="h-full rounded-full bg-white" style={{width:'100%'}}/></div><div className="text-xs mt-2 flex items-center gap-1"><AlertTriangle size={12}/>Exceeds wallet by ₹7,400 — salary deduction required</div></div>
+          <div className="border-2 border-purple-600 bg-purple-50 rounded-xl p-4"><div className="flex justify-between"><div><span className="font-bold text-sm">₹15L</span> <span className="px-2 py-0.5 bg-purple-200 text-purple-700 rounded text-[10px] font-bold">SELECTED</span><div className="text-xs text-onyx-500 mt-1">Sum Insured</div></div><span className="text-sm font-bold text-orange-700">+₹7,400/yr overflow</span></div></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L3-03': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">Select a tier</h2><p className="text-sm text-onyx-500">Some plans restricted by your grade</p></div>
+          <div className="border-2 border-purple-600 bg-purple-50 rounded-xl p-4"><div className="flex justify-between"><div><span className="font-bold text-sm">Silver</span><div className="text-xs text-onyx-500">₹3L Sum Insured</div></div><span className="text-sm font-bold text-green-700">Included</span></div></div>
+          <div className="border-2 border-onyx-200 rounded-xl p-4 opacity-50"><div className="flex justify-between"><div className="flex items-center gap-2"><span className="font-bold text-sm text-onyx-400">Gold</span><span className="px-1.5 py-0.5 bg-cerise-200 text-cerise-700 text-[9px] font-bold rounded flex items-center gap-1"><AlertCircle size={8}/>LOCKED</span></div><span className="text-sm text-onyx-400">₹5L</span></div><div className="text-xs text-cerise-700 mt-1">Not available for your grade (Grade C)</div></div>
+          <div className="border-2 border-onyx-200 rounded-xl p-4 opacity-50"><div className="flex justify-between"><div className="flex items-center gap-2"><span className="font-bold text-sm text-onyx-400">Platinum</span><span className="px-1.5 py-0.5 bg-cerise-200 text-cerise-700 text-[9px] font-bold rounded flex items-center gap-1"><AlertCircle size={8}/>LOCKED</span></div><span className="text-sm text-onyx-400">₹10L</span></div><div className="text-xs text-cerise-700 mt-1">Not available for your grade (Grade C)</div></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L3-04': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">Select a tier</h2></div>
+          <div className={`border-2 border-orange-400 bg-orange-100 rounded-xl p-3`}><div className="flex items-center gap-2"><AlertTriangle size={14} className="text-orange-700"/><span className="text-sm font-semibold text-orange-800">Downgrade Warning</span></div><p className="text-xs text-orange-700 mt-1">Selecting a lower plan reduces your coverage. Room rent limits and co-pay may apply.</p></div>
+          <div className="border-2 border-onyx-300 rounded-xl p-4"><div className="flex justify-between"><div><span className="font-bold text-sm">Silver</span><span className="text-xs text-orange-700 ml-2">← Downgrade</span><div className="text-xs text-onyx-500">₹3L Sum Insured</div></div><span className="text-sm font-bold text-green-700">Included</span></div></div>
+          <div className="border-2 border-purple-600 bg-purple-50 rounded-xl p-4"><div className="flex justify-between"><div><span className="font-bold text-sm">Gold</span><span className="px-2 py-0.5 bg-purple-200 text-purple-700 rounded text-[10px] font-bold ml-2">CURRENT</span><div className="text-xs text-onyx-500">₹5L Sum Insured</div></div><span className="text-sm font-bold text-orange-700">+₹500/mo</span></div></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L4-01': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border border-purple-400 bg-purple-50 rounded-xl p-3"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center"><Shield size={18} className="text-blue-700"/></div><div><div className="font-semibold text-sm">Top-up Cover</div><div className="text-xs text-onyx-500">Extra ₹5L</div></div></div><Toggle on={true} onToggle={()=>{}} /></div></div>
+          <div className="border-2 border-cerise-500 rounded-xl p-3 bg-cerise-200 opacity-75">
+            <div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-onyx-200 flex items-center justify-center"><Heart size={18} className="text-onyx-400"/></div><div><div className="font-semibold text-sm text-onyx-400">OPD Cover</div><div className="text-xs text-cerise-700">Requires base SI ≥ ₹7L</div><div className="text-[10px] text-onyx-500">Current: ₹3L — <span className="text-cerise-700 font-bold">Ineligible</span></div></div></div><Toggle on={false} onToggle={()=>{}} disabled /></div>
+            <div className="mt-2 text-xs text-cerise-700 flex items-center gap-1"><AlertCircle size={12}/>Change your base coverage to unlock this add-on</div>
+          </div>
+          <div className="border border-onyx-200 rounded-xl p-3"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center"><Heart size={18} className="text-green-700"/></div><div><div className="font-semibold text-sm">Dental & Vision</div><div className="text-xs text-onyx-500">₹10,000/year | ₹1,800/yr</div></div></div><Toggle on={false} onToggle={()=>{}} /></div></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L4-02': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border border-onyx-200 rounded-xl p-3"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center"><Shield size={18} className="text-blue-700"/></div><div><div className="font-semibold text-sm">Top-up Cover</div><div className="text-xs text-onyx-500">₹4,800/yr</div></div></div><Toggle on={true} onToggle={()=>{}} /></div></div>
+          <div className="border-2 border-cerise-500 rounded-xl p-4 bg-cerise-200"><div className="flex items-center gap-3 mb-2"><div className="w-10 h-10 rounded-lg bg-onyx-200 animate-pulse"/><div className="flex-1 space-y-2"><div className="h-3 bg-onyx-200 rounded animate-pulse w-3/4"/><div className="h-2 bg-onyx-200 rounded animate-pulse w-1/2"/></div></div><div className="flex items-center gap-2"><AlertCircle size={14} className="text-cerise-700"/><span className="text-sm font-semibold text-cerise-700">Unable to calculate premium</span></div><button className="mt-2 text-xs text-purple-600 font-semibold underline">Retry</button></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L4-03': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border-2 border-blue-400 bg-blue-200 rounded-xl p-3"><div className="flex items-center gap-2 mb-1"><Info size={14} className="text-blue-700"/><span className="text-sm font-semibold text-blue-700">Parental Coverage Flagged</span></div><p className="text-xs text-blue-800">Based on your family setup in Step 2, parental coverage has been pre-selected as an enhancement.</p></div>
+          <div className="border-2 border-purple-600 bg-purple-50 rounded-xl p-3"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center"><Users size={18} className="text-green-700"/></div><div><div className="font-semibold text-sm">Parent Cover</div><div className="text-xs text-purple-600">Pre-selected from L2 config</div><div className="text-xs text-onyx-500">₹3L for parents | ₹9,600/yr</div></div></div><Toggle on={true} onToggle={()=>{}} /></div></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L5-01': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border border-onyx-300 rounded-xl overflow-hidden"><div className="bg-onyx-800 text-white p-4"><div className="text-xs opacity-70">Total Annual Premium</div><div className="text-3xl font-bold mt-1">₹{premium.total.toLocaleString()}</div></div><div className="p-4"><div className="flex justify-between text-sm mb-2"><span className="text-onyx-500">Employer</span><span className="font-bold text-green-700">₹{premium.employerPays.toLocaleString()}</span></div></div></div>
+          <div className={`border-2 border-orange-400 bg-orange-100 rounded-xl p-4`}><div className="flex items-center gap-2 mb-1"><AlertTriangle size={16} className="text-orange-700"/><span className="font-semibold text-sm text-orange-800">CD Balance Check</span></div><p className="text-sm text-orange-700">Insufficient CD balance detected. E-card generation may be delayed until balance is verified.</p><div className="text-xs text-onyx-500 mt-2">Estimated verification: 2-3 business days</div></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L5-02': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="bg-gradient-to-r from-cerise-700 to-orange-700 rounded-xl p-4 text-white"><div className="flex items-center gap-2 mb-2"><Wallet size={16}/><span className="text-sm font-semibold">Wallet Overflow</span></div><div className="flex justify-between text-xs opacity-80 mb-1"><span>Used: ₹32,400</span><span>Wallet: ₹25,000</span></div><div className="w-full h-2 rounded-full bg-white/30"><div className="h-full rounded-full bg-white" style={{width:'100%'}}/></div><div className="text-xs mt-2">Overflow: ₹7,400 — requires salary deduction consent</div></div>
+          <div className="border-2 border-orange-400 bg-orange-100 rounded-xl p-4"><label className="flex items-start gap-3 cursor-pointer"><div className="w-5 h-5 border-2 border-cerise-500 rounded mt-0.5 flex-shrink-0"/><div><span className="text-xs text-onyx-700 leading-relaxed font-semibold">I consent to ₹617/month salary deduction</span><div className="text-[10px] text-cerise-700 mt-1 flex items-center gap-1"><AlertCircle size={10}/>Consent required to proceed</div></div></label></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L5-03': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border border-onyx-300 rounded-xl overflow-hidden"><div className="bg-onyx-800 text-white p-4"><div className="text-xs opacity-70">Total Annual Premium</div><div className="text-3xl font-bold mt-1">₹{premium.total.toLocaleString()}</div></div><div className="p-4 space-y-3"><div className="flex justify-between text-sm"><span className="text-onyx-500">Base</span><span className="font-medium">₹{premium.baseCost.toLocaleString()}</span></div><div className="border-2 border-blue-400 bg-blue-200 rounded-lg p-2 flex items-center gap-2"><Info size={14} className="text-blue-700"/><div><span className="text-xs font-bold text-blue-700">Employer Subsidy Applied</span><div className="text-[10px] text-blue-600">Your employer covers a portion of this premium</div></div></div></div></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L6-01': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><Shield size={16} className="text-purple-600"/><span className="font-semibold text-sm">Coverage</span></div><span className="text-xs text-purple-600">Edit</span></div><div className="text-sm text-onyx-600">₹5L Floater</div></div>
+          <div className="border-2 border-cerise-500 rounded-xl p-4 bg-cerise-200">
+            <label className="flex items-start gap-3"><div className="w-5 h-5 border-2 border-cerise-500 rounded mt-0.5 flex-shrink-0 animate-pulse"/><span className="text-xs text-onyx-700">I agree to the terms and conditions</span></label>
+            <div className="text-[10px] text-cerise-700 mt-2 flex items-center gap-1 font-semibold"><AlertCircle size={10}/>Please accept the terms to continue</div>
+          </div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L6-02': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center gap-2"><Shield size={16} className="text-purple-600"/><span className="font-semibold text-sm">Coverage</span></div><div className="text-sm text-onyx-600 mt-1">₹5L Floater | 2 members</div></div>
+          <label className="flex items-start gap-3"><div className="w-5 h-5 border-2 border-purple-600 bg-purple-600 rounded mt-0.5 flex-shrink-0 flex items-center justify-center"><CheckCircle2 size={14} className="text-white"/></div><span className="text-xs text-onyx-600">I agree to the terms</span></label>
+          <div className="border-2 border-cerise-500 bg-cerise-200 rounded-xl p-4 text-center"><AlertCircle size={24} className="text-cerise-700 mx-auto mb-2"/><div className="font-bold text-sm text-cerise-800">Submission Failed</div><p className="text-xs text-cerise-700 mt-1">Unable to submit your enrollment. Your selections are saved.</p><button className="mt-3 acko-btn bg-purple-600 text-white px-6 text-sm mx-auto"><RefreshCw size={14} className="mr-2"/>Retry</button></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      case 'E-L6-03': case 'E-L6-04': return (
+        <div className="px-5 py-4 space-y-4">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2></div>
+          <div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center gap-2"><Shield size={16} className="text-purple-600"/><span className="font-semibold text-sm">Coverage</span></div><div className="text-sm text-onyx-600 mt-1">₹5L Floater</div></div>
+          <label className="flex items-start gap-3"><div className="w-5 h-5 border-2 border-purple-600 bg-purple-600 rounded mt-0.5 flex-shrink-0 flex items-center justify-center"><CheckCircle2 size={14} className="text-white"/></div><span className="text-xs text-onyx-600">I agree to the terms</span></label>
+          <div className="bg-orange-100 text-orange-700 rounded-xl p-4 space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-sm"><AlertTriangle size={16}/>Min Participation Pending</div>
+            {config.minPart_topUp&&<div className="flex items-center gap-2 text-xs bg-orange-200 rounded-lg p-2"><span className="px-1.5 py-0.5 bg-orange-700 text-white text-[9px] rounded font-bold">PENDING</span><span>Top-up: awaiting threshold</span></div>}
+            {config.minPart_secondary&&<div className="flex items-center gap-2 text-xs bg-orange-200 rounded-lg p-2"><span className="px-1.5 py-0.5 bg-orange-700 text-white text-[9px] rounded font-bold">PENDING</span><span>Secondary: awaiting threshold</span></div>}
+            {config.minPart_addOns&&<div className="flex items-center gap-2 text-xs bg-orange-200 rounded-lg p-2"><span className="px-1.5 py-0.5 bg-orange-700 text-white text-[9px] rounded font-bold">PENDING</span><span>Add-ons: awaiting threshold</span></div>}
+            {!config.minPart_topUp&&!config.minPart_secondary&&!config.minPart_addOns&&<div className="flex items-center gap-2 text-xs bg-orange-200 rounded-lg p-2"><span className="px-1.5 py-0.5 bg-orange-700 text-white text-[9px] rounded font-bold">PENDING</span><span>E-card pending enrollment threshold</span></div>}
+            <p className="text-xs">Your e-card will be generated once minimum participation is met.</p>
+          </div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+      default: return (
+        <div className="px-5 py-4 space-y-4">
+          <div className={`border-2 ${sevColor} rounded-xl p-4`}><div className="flex items-center gap-2 mb-1"><AlertCircle size={16} className={sevText}/><span className={`font-semibold text-sm ${sevText}`}>{err.error}</span></div><p className="text-xs text-onyx-600">{err.message}</p></div>
+          <ErrBadge /><DismissBtn />
+        </div>
+      );
+    }
+  };
   
-  const ScenarioBanner = () => scenarioMode ? (
-    <div className="px-4 py-2 bg-purple-600 text-white flex items-center justify-between">
-      <div className="flex items-center gap-2"><Play size={14} /><span className="text-xs font-semibold">{scenarioMode.name}</span><span className="text-[10px] opacity-75">Step {scenarioStep + 1}/{scenarioMode.steps.length}</span></div>
-      <div className="flex items-center gap-2">
-        <button onClick={advanceScenario} className="text-[10px] px-2 py-1 bg-white text-purple-700 rounded font-bold">{scenarioStep >= scenarioMode.steps.length - 1 ? 'Finish' : 'Next →'}</button>
-        <button onClick={() => { setScenarioMode(null); setScenarioStep(0); }} className="text-white/70 hover:text-white"><X size={14} /></button>
+  const renderScenarioScreen = (scenario) => {
+    const sid = scenario.id;
+    const stype = scenario.type;
+    if (stype === 'wallet' || sid?.includes('WALLET')) return (
+      <div className="px-5 py-4 space-y-4">
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-4 text-white"><div className="flex items-center gap-2 mb-2"><Wallet size={16}/><span className="text-sm font-semibold">Wallet Balance</span></div><div className="flex justify-between text-xs opacity-80 mb-1"><span>Used: ₹0</span><span>Remaining: ₹25,000</span></div><div className="w-full h-2 rounded-full bg-purple-400"><div className="h-full rounded-full bg-white" style={{width:'0%'}}/></div></div>
+        <div className="text-xs font-semibold text-purple-700 bg-purple-100 rounded-lg p-2">Step 1: Full wallet on L1</div>
+        <div className="border border-onyx-200 rounded-xl p-3"><div className="text-sm font-semibold">₹5,00,000 Sum Insured</div><div className="text-xs text-onyx-500">Base coverage — fully in wallet</div></div>
+        <div className="border-t border-onyx-200 pt-3"><div className="text-xs font-semibold text-orange-700 bg-orange-100 rounded-lg p-2">Step 2: Selections eat into wallet (L3/L4)</div></div>
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 text-white"><div className="flex items-center gap-2 mb-2"><Wallet size={16}/><span className="text-sm font-semibold">Wallet — Partially Used</span></div><div className="flex justify-between text-xs opacity-80 mb-1"><span>Used: ₹18,600</span><span>Remaining: ₹6,400</span></div><div className="w-full h-2 rounded-full bg-orange-300"><div className="h-full rounded-full bg-white" style={{width:'74%'}}/></div></div>
+        <div className="space-y-2"><div className="flex justify-between text-xs p-2 bg-onyx-100 rounded-lg"><span>SI Upgrade: ₹15L</span><span className="font-bold">+₹8,400</span></div><div className="flex justify-between text-xs p-2 bg-onyx-100 rounded-lg"><span>Top-up</span><span className="font-bold">+₹4,800</span></div><div className="flex justify-between text-xs p-2 bg-onyx-100 rounded-lg"><span>Add-ons (OPD + Dental)</span><span className="font-bold">+₹5,400</span></div></div>
+        <div className="border-t border-onyx-200 pt-3"><div className="text-xs font-semibold text-cerise-700 bg-cerise-200 rounded-lg p-2">Step 3: Wallet exceeded → Consent required</div></div>
+        <div className="bg-gradient-to-r from-cerise-700 to-cerise-500 rounded-xl p-4 text-white"><div className="flex items-center gap-2 mb-2"><Wallet size={16}/><AlertTriangle size={14}/><span className="text-sm font-semibold">EXCEEDED</span></div><div className="flex justify-between text-xs opacity-80 mb-1"><span>Used: ₹32,400</span><span>Wallet: ₹25,000</span></div><div className="w-full h-2 rounded-full bg-cerise-200"><div className="h-full rounded-full bg-white" style={{width:'100%'}}/></div><div className="text-xs mt-2">Overflow: ₹7,400 → salary deduction ₹617/mo</div></div>
+        <div className="border-2 border-orange-400 bg-orange-100 rounded-xl p-3"><label className="flex items-start gap-3"><div className="w-5 h-5 border-2 border-cerise-500 rounded mt-0.5"/><span className="text-xs text-onyx-700 font-semibold">I consent to ₹617/month salary deduction</span></label></div>
+        <button onClick={()=>{setScenarioMode(null);setScenarioStep(0);}} className="text-xs text-onyx-500 underline">Exit scenario</button>
       </div>
-    </div>
-  ) : null;
+    );
+    if (sid?.includes('FLOW-02')) return (
+      <div className="px-5 py-4 space-y-4">
+        <div className="text-xs font-semibold text-green-700 bg-green-100 rounded-lg p-2">Steps 1-3: User completes L0 through L3</div>
+        <div className="space-y-2">{['L0 — Welcome','L1 — Coverage','L2 — Family','L3 — Plan'].map((l,i)=>(<div key={i} className="flex items-center gap-2 text-sm text-green-700"><CheckCircle2 size={14}/><span>{l}</span></div>))}</div>
+        <div className="border-t border-onyx-200 pt-3"><div className="text-xs font-semibold text-cerise-700 bg-cerise-200 rounded-lg p-2">Step 4: User closes mid-flow at L4</div></div>
+        <div className="bg-onyx-800 rounded-xl p-4 text-white text-center"><div className="text-sm font-semibold mb-2">Are you sure you want to leave?</div><p className="text-xs opacity-70">Your selections will NOT be saved if you don't complete all steps.</p><div className="flex gap-2 mt-3 justify-center"><button className="px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-semibold">Continue Enrollment</button><button className="px-4 py-2 bg-onyx-600 text-white rounded-lg text-xs">Leave</button></div></div>
+        <div className="border-t border-onyx-200 pt-3"><div className="text-xs font-semibold text-blue-700 bg-blue-200 rounded-lg p-2">Step 5: User returns — Resume from L4</div></div>
+        <div className="bg-purple-100 rounded-xl p-4"><div className="flex items-center gap-3 mb-2"><RefreshCw size={16} className="text-purple-600"/><div><div className="font-semibold text-sm text-purple-800">Welcome back!</div><div className="text-xs text-purple-600">Your draft selections are saved.</div></div></div><div className="flex items-center gap-2 mt-2">{['L0','L1','L2','L3'].map(l=><span key={l} className="px-2 py-1 bg-green-200 text-green-700 text-[10px] rounded font-bold">{l} ✓</span>)}<span className="px-2 py-1 bg-purple-200 text-purple-700 text-[10px] rounded font-bold animate-pulse">L4 →</span></div><div className="text-xs text-onyx-500 mt-2">Coverage is NOT active until you submit.</div></div>
+        <button onClick={()=>{setScenarioMode(null);setScenarioStep(0);}} className="text-xs text-onyx-500 underline">Exit scenario</button>
+      </div>
+    );
+    if (stype === 'premium' || sid?.includes('PREMIUM')) return (
+      <div className="px-5 py-4 space-y-4">
+        <div className="text-xs font-semibold text-purple-700 bg-purple-100 rounded-lg p-2">Step 1: Initial selections</div>
+        <div className="border border-onyx-300 rounded-xl overflow-hidden"><div className="bg-onyx-800 text-white p-4"><div className="text-xs opacity-70">Total Premium</div><div className="text-2xl font-bold">₹16,800/yr</div></div><div className="p-3 text-xs space-y-1"><div className="flex justify-between"><span>Base</span><span>₹12,000</span></div><div className="flex justify-between"><span>Top-up</span><span>₹4,800</span></div></div></div>
+        <div className="text-xs font-semibold text-orange-700 bg-orange-100 rounded-lg p-2">Step 2: User adds OPD add-on</div>
+        <div className="border border-purple-400 bg-purple-50 rounded-xl p-3"><div className="flex items-center justify-between"><div><div className="font-semibold text-sm">OPD Cover</div><div className="text-xs text-onyx-500">₹2,400/yr</div></div><Toggle on={true} onToggle={()=>{}}/></div></div>
+        <div className="flex items-center gap-2 text-xs text-green-700"><ArrowRight size={14}/>Premium updates in real-time</div>
+        <div className="border border-onyx-300 rounded-xl overflow-hidden"><div className="bg-onyx-800 text-white p-4"><div className="text-xs opacity-70">Updated Premium</div><div className="text-2xl font-bold">₹19,200/yr <span className="text-sm text-green-400">+₹2,400</span></div></div><div className="p-3 text-xs space-y-1"><div className="flex justify-between"><span>Base</span><span>₹12,000</span></div><div className="flex justify-between"><span>Top-up</span><span>₹4,800</span></div><div className="flex justify-between font-bold text-purple-700"><span>OPD (new)</span><span>₹2,400</span></div></div></div>
+        <div className="text-xs font-semibold text-green-700 bg-green-100 rounded-lg p-2">Step 3: View breakdown — split shown</div>
+        <div className="grid grid-cols-2 gap-2"><div className="bg-green-100 rounded-lg p-3 text-center"><div className="text-xs text-onyx-500">Employer</div><div className="font-bold text-green-700">₹12,000</div></div><div className="bg-orange-100 rounded-lg p-3 text-center"><div className="text-xs text-onyx-500">You pay</div><div className="font-bold text-orange-700">₹7,200</div><div className="text-[10px] text-onyx-500">₹600/mo</div></div></div>
+        <button onClick={()=>{setScenarioMode(null);setScenarioStep(0);}} className="text-xs text-onyx-500 underline">Exit scenario</button>
+      </div>
+    );
+    if (sid?.includes('MP-01')) return (
+      <div className="px-5 py-8 text-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-orange-200 flex items-center justify-center mx-auto"><AlertTriangle size={32} className="text-orange-700"/></div>
+        <h2 className="text-lg font-bold text-onyx-800">Preferences Submitted</h2>
+        <p className="text-sm text-onyx-500">Your selections are saved. Coverage will activate once enrollment reaches the minimum threshold.</p>
+        <div className="text-left space-y-2">
+          <div className="text-xs font-semibold text-onyx-600">COMPONENT STATUS</div>
+          {config.minPart_topUp&&<div className="flex items-center gap-2 p-3 bg-orange-100 rounded-xl"><span className="px-2 py-0.5 bg-orange-700 text-white text-[9px] rounded font-bold">PENDING</span><div className="flex-1"><div className="text-sm font-medium">Top-up Cover</div><div className="text-[10px] text-onyx-500">Awaiting 75% enrollment</div></div><div className="text-xs text-orange-700 font-bold">42%</div></div>}
+          {config.minPart_secondary&&<div className="flex items-center gap-2 p-3 bg-orange-100 rounded-xl"><span className="px-2 py-0.5 bg-orange-700 text-white text-[9px] rounded font-bold">PENDING</span><div className="flex-1"><div className="text-sm font-medium">Secondary Plan</div><div className="text-[10px] text-onyx-500">Awaiting 60% enrollment</div></div><div className="text-xs text-orange-700 font-bold">35%</div></div>}
+          {config.minPart_addOns&&<div className="flex items-center gap-2 p-3 bg-orange-100 rounded-xl"><span className="px-2 py-0.5 bg-orange-700 text-white text-[9px] rounded font-bold">PENDING</span><div className="flex-1"><div className="text-sm font-medium">Add-ons</div><div className="text-[10px] text-onyx-500">Awaiting 50% enrollment</div></div><div className="text-xs text-orange-700 font-bold">28%</div></div>}
+          <div className="flex items-center gap-2 p-3 bg-green-100 rounded-xl"><span className="px-2 py-0.5 bg-green-700 text-white text-[9px] rounded font-bold">ACTIVE</span><div className="flex-1"><div className="text-sm font-medium">Base Coverage</div><div className="text-[10px] text-onyx-500">Active immediately</div></div><CheckCircle2 size={16} className="text-green-700"/></div>
+        </div>
+        <p className="text-xs text-onyx-400">You'll be notified when thresholds are met and e-card is generated.</p>
+        <button onClick={()=>{setScenarioMode(null);setScenarioStep(0);}} className="text-xs text-onyx-500 underline">Exit scenario</button>
+      </div>
+    );
+    if (sid?.includes('ECARD')) {
+      const hasMP=config.minPart_topUp||config.minPart_secondary||config.minPart_addOns;
+      return (
+        <div className="px-5 py-8 text-center space-y-4">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${hasMP?'bg-orange-200':config.cdCheck?'bg-blue-200':'bg-green-200'}`}>{hasMP?<AlertTriangle size={32} className="text-orange-700"/>:config.cdCheck?<Clock size={32} className="text-blue-700"/>:<CheckCircle2 size={32} className="text-green-700"/>}</div>
+          <h2 className="text-lg font-bold text-onyx-800">{hasMP?'E-card Pending':config.cdCheck?'Verification In Progress':'E-card Ready!'}</h2>
+          <p className="text-sm text-onyx-500">{hasMP?'E-card will be generated once minimum participation thresholds are met per component.':config.cdCheck?'CD balance check in progress. E-card will be available in 2-3 business days.':'Your e-card has been generated. Save it for cashless access at hospitals.'}</p>
+          {!hasMP&&!config.cdCheck&&<div className="border border-green-200 rounded-xl p-4 bg-green-100"><div className="text-xs font-semibold text-green-700 mb-2">E-CARD</div><div className="bg-white rounded-lg p-3 border border-green-200"><div className="flex items-center gap-3"><Shield size={24} className="text-purple-600"/><div className="text-left"><div className="font-bold text-sm">ACKO Health</div><div className="text-xs text-onyx-500">Policy: GMC-{comboId}</div></div></div></div></div>}
+          <button onClick={()=>{setScenarioMode(null);setScenarioStep(0);}} className="text-xs text-onyx-500 underline">Exit scenario</button>
+        </div>
+      );
+    }
+    return (
+      <div className="px-5 py-4 space-y-4">
+        <div className="text-xs font-semibold text-purple-700 bg-purple-100 rounded-lg p-2">Scenario: {scenario.name}</div>
+        <div className="space-y-3">{scenario.steps.map((st,i)=>(<div key={i} className="flex gap-3"><div className="w-6 h-6 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{i+1}</div><div className="flex-1"><div className="text-sm text-onyx-700">{st.layer&&<span className="font-bold">[{st.layer}] </span>}{st.action}</div><div className="text-xs text-green-600 mt-0.5">→ {st.expected}</div></div></div>))}</div>
+        <button onClick={()=>{setScenarioMode(null);setScenarioStep(0);}} className="text-xs text-onyx-500 underline">Exit scenario</button>
+      </div>
+    );
+  };
   
   const renderScreen = () => {
+    if (simulatingError) return renderErrorScreen(simulatingError);
+    if (scenarioMode) return renderScenarioScreen(scenarioMode);
     if (submitted) return (
       <div className="px-5 py-8 text-center space-y-4 fade-in-up">
         <div className="w-20 h-20 rounded-full bg-green-200 flex items-center justify-center mx-auto"><CheckCircle2 size={40} className="text-green-700" /></div>
@@ -844,10 +1133,8 @@ const MobileSimulator = ({ config, layers, comboId, pendingScenario, onScenarioC
                   </div>
                 )}
                 
-                {/* Scenario Banner */}
-                <ScenarioBanner />
-                {/* Scrollable content with error overlay */}
-                <div className="flex-1 overflow-y-auto mobile-scroll relative">{renderScreen()}<ErrorOverlay /></div>
+                {/* Scrollable content */}
+                <div className="flex-1 overflow-y-auto mobile-scroll">{renderScreen()}</div>
                 
                 {/* Floating CTA */}
                 {!submitted && (
@@ -900,6 +1187,12 @@ const MobileSimulator = ({ config, layers, comboId, pendingScenario, onScenarioC
           <h4 className="font-semibold text-sm text-onyx-800 mb-3 flex items-center gap-2"><AlertCircle size={16} className="text-cerise-500" />Error States</h4>
           <div className="space-y-2">{(LAYER_ERRORS[activeLayer] || []).map(err => (<div key={err.id} className={`p-2 rounded-lg transition-all ${simulatingError?.id === err.id ? 'bg-cerise-200 ring-2 ring-cerise-500' : 'bg-onyx-100'}`}><div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${err.severity === 'critical' ? 'bg-cerise-700' : err.severity === 'validation' ? 'bg-orange-700' : err.severity === 'warning' ? 'bg-orange-500' : err.severity === 'blocking' ? 'bg-cerise-700' : 'bg-blue-700'}`}>{err.severity}</span><span className="text-xs font-mono text-onyx-400">{err.id}</span></div><button onClick={()=>simulateError(err)} className={`text-[10px] px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${simulatingError?.id === err.id ? 'bg-cerise-700 text-white' : 'bg-cerise-200 text-cerise-700 hover:bg-cerise-300'}`}><Play size={10}/>{simulatingError?.id === err.id ? 'Simulating...' : 'Simulate'}</button></div><div className="text-sm font-medium text-onyx-800 mt-1">{err.error}</div><div className="text-xs text-onyx-500">{err.message}</div></div>))}</div>
         </div>
+        {/* Scenario controls - outside phone */}
+        {scenarioMode && <div className="acko-card p-4 bg-purple-50 border-purple-200">
+          <div className="flex items-center justify-between"><h4 className="font-semibold text-sm text-purple-800 flex items-center gap-2"><Play size={16}/>Scenario: {scenarioMode.name}</h4><button onClick={()=>{setScenarioMode(null);setScenarioStep(0);}} className="text-xs text-onyx-500 hover:text-cerise-700">Exit</button></div>
+          <div className="mt-2 space-y-1">{scenarioMode.steps.map((st,i)=>(<div key={i} className="flex items-center gap-2 text-xs"><div className={`w-4 h-4 rounded-full flex items-center justify-center ${i===scenarioStep?'bg-purple-600 text-white':'bg-onyx-200 text-onyx-500'}`}>{i+1}</div><span className="text-onyx-600">{st.action}</span></div>))}</div>
+          <div className="mt-3 flex justify-end"><button onClick={advanceScenario} className="text-[10px] px-2 py-1 bg-purple-600 text-white rounded font-bold">{scenarioStep >= scenarioMode.steps.length - 1 ? 'Finish' : 'Next →'}</button></div>
+        </div>}
       </div>
     </div>
   );
