@@ -1920,8 +1920,6 @@ export default function GMCFlowEngineSimulator() {
   const [rfqMatches, setRfqMatches] = useState(null);
   const [pendingScenario, setPendingScenario] = useState(null);
   
-  if (logicMode === 'updated') return (<><style>{ackoStyles}</style><LogicUpdatesSimulator onBack={() => setLogicMode('current')} /></>);
-  
   const currentConfig = useMemo(() => (inputMode === 'preset' || inputMode === 'rfq') ? POLICY_COMBINATIONS[selectedCombo] : (customConfig || POLICY_COMBINATIONS.V01), [selectedCombo, inputMode, customConfig]);
   const layers = useMemo(() => FlowEngine.getLayerVisibility(currentConfig), [currentConfig]);
   const scenarios = useMemo(() => FlowEngine.generateTestScenarios(currentConfig, selectedCombo), [currentConfig, selectedCombo]);
@@ -1929,6 +1927,8 @@ export default function GMCFlowEngineSimulator() {
   const handleConfigChange = (config, source) => { setCustomConfig(config); if (source === 'CUSTOM' || source === 'JSON') setInputMode('form'); };
   const handleRFQSelect = useCallback((comboId) => { setSelectedCombo(comboId); setInputMode('rfq'); }, []);
   const comboGroups = useMemo(() => { const g = { VANILLA: [], MODULAR: [], FLEX: [] }; Object.entries(POLICY_COMBINATIONS).forEach(([id, config]) => g[config.construct].push({ id, ...config })); return g; }, []);
+  
+  if (logicMode === 'updated') return (<><style>{ackoStyles}</style><LogicUpdatesSimulator onBack={() => setLogicMode('current')} /></>);
   
   return (
     <>
