@@ -1278,23 +1278,21 @@ const V2FlowEngine = {
     const layers={
       L0:{show:true,type:'view',reason:'Always shown - Welcome'},
       L1:{show:true,type:'view',reason:'Always shown - Base Coverage'},
-      L2:{show:false,type:'skip',reason:'Plan Configuration'},
+      L2:{show:true,type:'view',reason:'View plan + select family type'},
       L3:{show:true,type:'conditional',reason:'Family enrollment'},
       L4:{show:false,type:'skip',reason:'Enhancement Options'},
       L5:{show:false,type:'skip',reason:'Premium & Payment'},
       L6:{show:true,type:'decision',reason:'Always shown - Review & Consent'}
     };
     if(config.construct==='MODULAR'){
-      layers.L2.show=true;
       const isViewOnly=!config.topUp||config.topUp===null;
       layers.L2.type=isViewOnly?'view':'decision';
-      layers.L2.reason=isViewOnly?'View assigned tier (no upgrade)':'Tier Upgrade selection + family type';
+      layers.L2.reason=isViewOnly?'View assigned tier + family type':'Tier Upgrade selection + family type';
     }
     if(config.construct==='FLEX'){
-      layers.L2.show=true;
       const isBaseFixed=config.base==='base-fixed';
       layers.L2.type=isBaseFixed?'view':'decision';
-      layers.L2.reason=isBaseFixed?'Base Fixed — view coverage, set family type':'Base Variable — configure SI, Family, Coverage Features';
+      layers.L2.reason=isBaseFixed?'Base Fixed — view coverage + family type':'Base Variable — configure SI, Family, Coverage Features';
     }
     layers.L3.type=config.construct==='FLEX'?'decision':'conditional';
     layers.L3.reason='Enter member details based on L2 family configuration';
@@ -1308,7 +1306,7 @@ const V2FlowEngine = {
     return layers;
   },
   getLayerDecision:(config)=>{
-    const d={L0:'V',L1:'V',L2:'S',L3:'C',L4:'S',L5:'S',L6:'D'};
+    const d={L0:'V',L1:'V',L2:'V',L3:'C',L4:'S',L5:'S',L6:'D'};
     if(config.construct==='MODULAR')d.L2=config.topUp?'D':'V';
     if(config.construct==='FLEX')d.L2=config.base==='base-variable'?'D':'V';
     d.L3=config.construct==='FLEX'?'D':'C';
@@ -1322,7 +1320,8 @@ const V2FlowEngine = {
       case'L0':comps.push({...C.C01,variant:'horizontal',state:'active'});break;
       case'L1':comps.push({...C.C02,variant:'view-only',state:'default'});if(config.construct==='FLEX')comps.push({...C.C10,variant:'banner',state:'full'});break;
       case'L2':
-        if(config.construct==='MODULAR'){const isVO=!config.topUp;comps.push({...C.C03,variant:isVO?'view-only':'tier-cards',state:'default'});if(!isVO)comps.push({...C.C17,variant:'side-by-side',state:'interactive'});}
+        if(config.construct==='VANILLA'){comps.push({...C.C02,variant:'view-only',state:'default'});}
+        else if(config.construct==='MODULAR'){const isVO=!config.topUp;comps.push({...C.C03,variant:isVO?'view-only':'tier-cards',state:'default'});if(!isVO)comps.push({...C.C17,variant:'side-by-side',state:'interactive'});}
         else if(config.construct==='FLEX'){const isBF=config.base==='base-fixed';comps.push({...C.C03,variant:isBF?'view-only':'configurator',state:'default'});comps.push({...C.C10,variant:isBF?'banner':'detailed',state:isBF?'full':'partial'});}
         comps.push({...C.C06,variant:'inline',state:'calculated'});break;
       case'L3':comps.push({...C.C04,variant:'compact',state:'view'},{...C.C05,variant:'add',state:'empty'});break;
@@ -1354,7 +1353,11 @@ const V2FlowEngine = {
     if(layer==='L2'){
       const c={headline:'',subtext:'',cta_primary:'Continue',cta_secondary:'',tooltips:['Tier','Sum Insured','Family Type'],anxiety_reducers:[]};
       const t=tone||({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]);
-      if(config.construct==='MODULAR'){
+      if(config.construct==='VANILLA'){
+        if(t==='info'){c.headline='Your plan';c.subtext='Review your base coverage and select family type';}
+        else if(t==='awareness'){c.headline='Your health plan';c.subtext='View your plan details and choose who is covered';}
+        else{c.headline='Your health plan';c.subtext='Review your employer-assigned plan and set your family structure';}
+      } else if(config.construct==='MODULAR'){
         const isVO=!config.topUp;
         if(t==='info'){c.headline=isVO?'Assigned plan':'Select a tier';c.subtext=isVO?'Review your plan and set family type':'Available tiers';}
         else if(t==='awareness'){c.headline=isVO?'Your assigned plan':'Upgrade your plan';c.subtext=isVO?'Review your coverage and choose family configuration':'Choose a higher tier + set who is covered';}
@@ -1497,6 +1500,7 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
   const [selectedTier, setSelectedTier] = useState(0);
   const [selectedSI, setSelectedSI] = useState('5L');
   const [selectedFamilyType, setSelectedFamilyType] = useState(2);
+  const [prevFamilyType, setPrevFamilyType] = useState(2);
   const [coverageFeatures, setCoverageFeatures] = useState({maternity:false,roomRent:false,opd:false,daycare:false,intlCover:false});
   const [topUpEnabled, setTopUpEnabled] = useState(false);
   const [secondaryEnabled, setSecondaryEnabled] = useState(false);
@@ -1523,14 +1527,31 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
     setPrevKey(configKey);setIdx(0);setSubmitted(false);setConsentTerms(false);setConsentSalary(false);setConsentWallet(false);
     setContentTone({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]||'info');
     setTopUpEnabled(false);setSecondaryEnabled(false);setAddOns({opd:false,dental:false,wellness:false});
-    setSelectedTier(0);setSelectedSI('5L');setSelectedFamilyType(2);setErrors({});setL4Section('topups');
+    setSelectedTier(0);setSelectedSI('5L');setSelectedFamilyType(2);setPrevFamilyType(2);setErrors({});setL4Section('topups');
     setCoverageFeatures({maternity:false,roomRent:false,opd:false,daycare:false,intlCover:false});
     setMembers([{id:1,name:'Employee',relation:'Self',age:32,gender:'Male'},{id:2,name:'Spouse',relation:'Spouse',age:30,gender:'Female'}]);
   }
   
+  if(selectedFamilyType!==prevFamilyType){
+    setPrevFamilyType(selectedFamilyType);
+    const base=[{id:1,name:'Employee',relation:'Self',age:32,gender:'Male'}];
+    if(selectedFamilyType>=1)base.push({id:2,name:'Spouse',relation:'Spouse',age:30,gender:'Female'});
+    if(selectedFamilyType>=2)base.push({id:3,name:'',relation:'Child',age:'',gender:''},{id:4,name:'',relation:'Child',age:'',gender:''});
+    if(selectedFamilyType>=3)base.push({id:5,name:'',relation:'Parent',age:'',gender:''},{id:6,name:'',relation:'Parent',age:'',gender:''});
+    setMembers(base);
+  }
+  
   const siNum = (si) => parseInt(si.replace('L',''));
   
-  const validate = () => {const e={};if(activeLayer==='L3'&&members.length===0)e.members='At least one member required';if(activeLayer==='L6'){if(!consentTerms)e.consent='Please accept terms';if(FlowEngine.hasEmployeePayment(config)&&premium.employeePays>0&&!consentSalary)e.salary='Consent to salary deduction';if(config.construct==='FLEX'&&premium.walletOverflow>0&&!consentWallet)e.wallet='Acknowledge wallet overflow';}setErrors(e);return Object.keys(e).length===0;};
+  const incompleteMemberCount = useMemo(()=>members.filter(m=>!m.name||!m.age||!m.gender).length,[members]);
+  const requiredMembersMissing = useMemo(()=>{
+    const hasParents=members.some(m=>m.relation==='Parent');
+    if(selectedFamilyType===3&&!hasParents)return 'Parents are required for "Self + Family + Parents" configuration';
+    if(incompleteMemberCount>0)return `${incompleteMemberCount} member(s) have incomplete details — fill all fields to proceed`;
+    return null;
+  },[members,selectedFamilyType,incompleteMemberCount]);
+  
+  const validate = () => {const e={};if(activeLayer==='L3'){if(members.length===0)e.members='At least one member required';else if(requiredMembersMissing)e.members=requiredMembersMissing;}if(activeLayer==='L6'){if(!consentTerms)e.consent='Please accept terms';if(FlowEngine.hasEmployeePayment(config)&&premium.employeePays>0&&!consentSalary)e.salary='Consent to salary deduction';if(config.construct==='FLEX'&&premium.walletOverflow>0&&!consentWallet)e.wallet='Acknowledge wallet overflow';}setErrors(e);return Object.keys(e).length===0;};
   const goNext = () => {if(activeLayer==='L6'){if(validate())setSubmitted(true);}else{if(validate())setIdx(Math.min(visibleLayers.length-1,idx+1));}};
   const goBack = () => {setIdx(Math.max(0,idx-1));setErrors({});};
   const goToLayer = (i) => {if(i<=idx){setIdx(i);setErrors({});}};
@@ -1576,7 +1597,13 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
           <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
           <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
           {config.construct==='FLEX'&&<WalletBar used={0} total={PremiumCalc.WALLET_TOTAL}/>}
-          <div className="border border-onyx-300 rounded-xl p-4"><div className="flex justify-between items-start mb-3"><div><div className="text-2xl font-bold text-onyx-800">{config.construct==='FLEX'?`₹${(PremiumCalc.SI_COSTS[selectedSI]||12000).toLocaleString()}`:'₹5,00,000'}</div><div className="text-xs text-onyx-500">Sum Insured</div></div><span className="px-2 py-1 bg-blue-200 text-blue-700 rounded text-[10px] font-medium flex items-center gap-1"><Info size={10}/>Floater</span></div></div>
+          <div className="border border-onyx-300 rounded-xl p-4">
+            <div className="flex justify-between items-start mb-3"><div><div className="text-2xl font-bold text-onyx-800">{config.construct==='FLEX'?`₹${(PremiumCalc.SI_COSTS[selectedSI]||12000).toLocaleString()}`:'₹5,00,000'}</div><div className="text-xs text-onyx-500">Sum Insured</div></div><span className="px-2 py-1 bg-blue-200 text-blue-700 rounded text-[10px] font-medium flex items-center gap-1"><Info size={10}/>Floater</span></div>
+            <div className="border-t border-onyx-200 pt-3 space-y-2">
+              <div className="text-xs font-semibold text-onyx-600 mb-1">COVERED FAMILY</div>
+              {members.map((m,i)=><div key={i} className="flex items-center gap-2 text-sm text-onyx-700"><Users size={14} className="text-purple-500"/>{m.relation}{m.name!==m.relation?` (${m.name})`:''}<CheckCircle2 size={14} className="text-green-600 ml-auto"/></div>)}
+            </div>
+          </div>
           <div className="space-y-2"><div className="text-xs font-semibold text-onyx-600">KEY BENEFITS</div>{['Cashless at 10,000+ hospitals','Pre & Post hospitalization','Day care procedures','Ambulance charges'].map((b,i)=><div key={i} className="flex items-center gap-2 text-sm text-onyx-700"><CheckCircle2 size={14} className="text-green-500"/>{b}</div>)}</div>
         </div>
       );
@@ -1585,6 +1612,14 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
         <div className="px-5 py-4 space-y-4 pb-2">
           <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
           <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
+          
+          {/* VANILLA: View-only plan summary */}
+          {config.construct==='VANILLA'&&(
+            <div className="border border-onyx-300 rounded-xl p-4">
+              <div className="flex items-start justify-between mb-3"><div><div className="text-sm font-semibold text-onyx-800">Base Coverage — Fixed</div><div className="text-2xl font-bold text-onyx-800 mt-1">₹5,00,000</div><div className="text-xs text-onyx-500">Sum Insured | Floater</div></div><span className="px-2 py-1 bg-green-200 text-green-700 rounded text-[10px] font-medium">EMPLOYER ASSIGNED</span></div>
+              <div className="text-xs text-onyx-400 italic flex items-center gap-1"><Info size={12}/>Fixed plan assigned by employer — select your family type below</div>
+            </div>
+          )}
           
           {/* MODULAR: Tier selection */}
           {config.construct==='MODULAR'&&config.topUp&&(
@@ -1653,14 +1688,36 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
         </div>
       );
       
-      case 'L3': return (
+      case 'L3': {
+        const updateMember=(id,field,value)=>setMembers(prev=>prev.map(m=>m.id===id?{...m,[field]:field==='age'?(parseInt(value)||''):value}:m));
+        return (
         <div className="px-5 py-4 space-y-4 pb-2">
           <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
           <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
           <div className="bg-purple-100 rounded-lg p-2 text-xs text-purple-700 flex items-center gap-2"><Info size={12}/>Family type: <span className="font-bold">{familyTypes[selectedFamilyType]}</span> (set in previous step)</div>
-          {members.map((m,i) => (
-            <div key={m.id} className="border border-onyx-300 rounded-xl p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"><Users size={18} className="text-purple-600"/></div><div><div className="font-semibold text-sm text-onyx-800">{m.name}</div><div className="text-xs text-onyx-500">{m.relation} | {m.age} yrs | {m.gender}</div></div></div>{m.relation!=='Self'&&<button onClick={()=>removeMember(m.id)} className="text-xs text-cerise-700 p-1"><Trash2 size={16}/></button>}</div></div>
-          ))}
+          {incompleteMemberCount>0&&<div className="bg-orange-100 border border-orange-300 rounded-lg p-2 text-xs text-orange-800 flex items-center gap-2"><AlertTriangle size={14}/>{incompleteMemberCount} member(s) need details — fill all fields to proceed</div>}
+          {members.map((m) => {
+            const isIncomplete=!m.name||!m.age||!m.gender;
+            const isSelf=m.relation==='Self';
+            return (
+            <div key={m.id} className={`border-2 rounded-xl p-4 transition-all ${isIncomplete?'border-orange-400 bg-orange-50':'border-onyx-300'}`}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center ${isIncomplete?'bg-orange-200':'bg-purple-100'}`}><Users size={18} className={isIncomplete?'text-orange-600':'text-purple-600'}/></div><div><div className="font-semibold text-sm text-onyx-800">{m.relation}{isIncomplete&&<span className="ml-2 text-[10px] px-1.5 py-0.5 bg-orange-300 text-orange-800 rounded font-bold">NEEDS INFO</span>}</div></div></div>
+                {!isSelf&&<button onClick={()=>removeMember(m.id)} className="text-xs text-cerise-700 p-1"><Trash2 size={16}/></button>}
+              </div>
+              {isSelf?(
+                <div className="text-xs text-onyx-500">{m.name} | {m.age} yrs | {m.gender}</div>
+              ):(
+                <div className="space-y-2">
+                  <input placeholder="Full Name" value={m.name} onChange={e=>updateMember(m.id,'name',e.target.value)} className={`acko-input text-sm ${!m.name?'border-orange-400':''}`} style={{height:36}}/>
+                  <div className="flex gap-2">
+                    <input placeholder="Age" type="number" value={m.age} onChange={e=>updateMember(m.id,'age',e.target.value)} className={`acko-input text-sm flex-1 ${!m.age?'border-orange-400':''}`} style={{height:36}}/>
+                    <select value={m.gender} onChange={e=>updateMember(m.id,'gender',e.target.value)} className={`acko-input text-sm flex-1 ${!m.gender?'border-orange-400':''}`} style={{height:36}}><option value="">Gender</option><option>Male</option><option>Female</option><option>Other</option></select>
+                  </div>
+                </div>
+              )}
+            </div>
+          );})}
           {errors.members&&<div className="text-xs text-cerise-700 bg-cerise-200 rounded-lg px-3 py-2 flex items-center gap-2"><AlertCircle size={14}/>{errors.members}</div>}
           {showAddForm?(
             <div className="border-2 border-purple-300 rounded-xl p-4 bg-purple-50 space-y-3">
@@ -1676,7 +1733,7 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
           )}
           {config.construct==='FLEX'&&<div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-100 rounded-lg px-3 py-2"><AlertTriangle size={14}/>Family changes affect wallet allocation</div>}
         </div>
-      );
+      );}
       
       case 'L4': return (
         <div className="px-5 py-4 space-y-4 pb-2">
@@ -1731,13 +1788,16 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
         <div className="px-5 py-4 space-y-4 pb-2">
           <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
           <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
-          <div className="border border-onyx-300 rounded-xl overflow-hidden"><div className="bg-onyx-800 text-white p-4"><div className="text-xs opacity-70">Total Annual Premium</div><div className="text-3xl font-bold mt-1">₹{premium.total.toLocaleString()}</div></div>
-            <div className="p-4 space-y-3"><div className="flex justify-between text-sm"><span className="text-onyx-500">{config.construct==='FLEX'?'Wallet covers':'[Company] pays'}</span><span className="font-bold text-green-700">₹{premium.employerPays.toLocaleString()}</span></div>
-            {premium.employeePays>0&&<div className="flex justify-between text-sm"><span className="text-onyx-500">You pay</span><span className="font-bold text-orange-700">₹{premium.employeePays.toLocaleString()}</span></div>}
-            {featureCost>0&&<div className="flex justify-between text-sm border-t border-onyx-200 pt-2"><span className="text-onyx-500">Coverage features</span><span className="font-bold text-orange-700">₹{featureCost.toLocaleString()}</span></div>}
+          <div className="border border-onyx-300 rounded-xl overflow-hidden">
+            <div className="bg-onyx-800 text-white p-4"><div className="text-xs opacity-70">Total Annual Premium</div><div className="text-3xl font-bold mt-1">₹{premium.total.toLocaleString()}</div><div className="text-xs opacity-70 mt-1">₹{Math.round(premium.total/12).toLocaleString()}/month</div></div>
+            <div className="p-4 space-y-4">
+              <div><div className="flex justify-between text-sm mb-2"><span className="text-onyx-500">{config.construct==='FLEX'?'Wallet covers':'[Company] pays'}</span><span className="font-bold text-green-700">₹{premium.employerPays.toLocaleString()} ({Math.round(premium.employerPays/premium.total*100)}%)</span></div><div className="w-full bg-onyx-200 rounded-full h-3"><div className="bg-green-500 rounded-full h-3 transition-all" style={{width:`${Math.round(premium.employerPays/premium.total*100)}%`}}/></div></div>
+              {premium.employeePays>0&&<div><div className="flex justify-between text-sm mb-2"><span className="text-onyx-500">You pay</span><span className="font-bold text-orange-700">₹{premium.employeePays.toLocaleString()} ({Math.round(premium.employeePays/premium.total*100)}%)</span></div><div className="w-full bg-onyx-200 rounded-full h-3"><div className="bg-orange-500 rounded-full h-3 transition-all" style={{width:`${Math.round(premium.employeePays/premium.total*100)}%`}}/></div></div>}
+              <div className="border-t border-onyx-200 pt-3"><div className="text-xs font-semibold text-onyx-600 mb-2">BREAKDOWN</div>{[['Base Coverage',premium.baseCost],premium.topUpCost>0&&['Top-up',premium.topUpCost],premium.secondaryCost>0&&['Secondary',premium.secondaryCost],premium.addOnCost>0&&['Add-ons',premium.addOnCost],featureCost>0&&['Coverage Features',featureCost]].filter(Boolean).map(([item,cost],i)=><div key={i} className="flex justify-between text-sm py-1.5 border-b border-onyx-100 last:border-0"><span className="text-onyx-700">{item}</span><span className="font-medium">₹{cost.toLocaleString()}</span></div>)}</div>
             </div>
           </div>
           {config.construct==='FLEX'&&premium.walletOverflow>0&&<div className="bg-orange-100 border border-orange-200 rounded-xl p-4"><div className="flex items-center gap-2 mb-1"><AlertTriangle size={16} className="text-orange-700"/><span className="font-semibold text-sm text-orange-800">Wallet Overflow</span></div><div className="text-sm text-orange-700">Exceeds wallet by <span className="font-bold">₹{premium.walletOverflow.toLocaleString()}</span></div><div className="text-xs text-orange-600 mt-1">₹{premium.monthlyEmployee}/month salary deduction</div></div>}
+          {premium.employeePays>0&&<div className="bg-onyx-100 rounded-xl p-3 flex items-center gap-3"><CreditCard size={18} className="text-onyx-500"/><div><div className="text-sm font-medium text-onyx-800">₹{premium.monthlyEmployee}/month salary deduction</div><div className="text-xs text-onyx-500">Deducted from your monthly salary</div></div></div>}
         </div>
       );
       
@@ -1903,7 +1963,7 @@ const LogicUpdatesSimulator = ({onBack}) => {
         </div>
       </main>
       
-      <footer className="bg-onyx-100 border-t border-onyx-300 py-6 mt-12"><div className="max-w-[1600px] mx-auto px-6 text-center text-onyx-500 text-sm">GMC Flow Engine Simulator — Logic Updates v5.0 | Stage 6 | Cascading RFQ + Reordered Layers + L4 Sections + F14 Features</div></footer>
+      <footer className="bg-onyx-100 border-t border-onyx-300 py-6 mt-12"><div className="max-w-[1600px] mx-auto px-6 text-center text-onyx-500 text-sm">GMC Flow Engine Simulator — Logic Updates v5.1 | Stage 6 | L2 Always Visible + Covered Family + Premium Breakdown + Member Auto-populate</div></footer>
     </div>
   );
 };
