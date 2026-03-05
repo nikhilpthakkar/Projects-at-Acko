@@ -521,7 +521,6 @@ const MobileSimulator = ({ config, layers, comboId, pendingScenario, onScenarioC
       if (layerIdx >= 0) setIdx(layerIdx);
     }
     setSimulatingError(err);
-    setTimeout(() => setSimulatingError(null), 6000);
   };
   
   const runScenario = (scenario) => {
@@ -1234,15 +1233,694 @@ const JsonUpload = ({ onConfigLoad }) => {
 };
 
 // ============================================================================
+// LOGIC UPDATES SIMULATOR (Stage 6)
+// ============================================================================
+const V2_LAYER_META = {
+  L0:{name:'Context & Welcome',shortName:'Welcome',question:'What am I about to do?',purpose:'Set expectations, reduce anxiety'},
+  L1:{name:'Base Coverage View',shortName:'Coverage',question:'What protection do I already have?',purpose:'Show employer coverage, build trust'},
+  L2:{name:'Plan Configuration',shortName:'Configure',question:'What level of coverage do I want?',purpose:'Select SI, family type, coverage features'},
+  L3:{name:'Family Enrollment',shortName:'Family',question:'Who exactly is covered?',purpose:'Enter actual member details based on L2 choices'},
+  L4:{name:'Enhancement Options',shortName:'Enhance',question:'What additional protection?',purpose:'Top-ups, Secondary plans, Add-ons (sub-sectioned)'},
+  L5:{name:'Premium & Payment',shortName:'Payment',question:'How much will I pay?',purpose:'Cost breakdown, payment method'},
+  L6:{name:'Review & Consent',shortName:'Review',question:'Is everything correct?',purpose:'Final confirmation, legal consent'},
+};
+
+const V2_LAYER_ERRORS = {
+  L0:LAYER_ERRORS.L0,
+  L1:LAYER_ERRORS.L1,
+  L2:[...LAYER_ERRORS.L3,{id:'E-L2-06',error:'Coverage feature conflict',message:'Selected features exceed wallet within this family configuration',severity:'warning'}],
+  L3:[...LAYER_ERRORS.L2],
+  L4:[...LAYER_ERRORS.L4],
+  L5:LAYER_ERRORS.L5,
+  L6:LAYER_ERRORS.L6,
+};
+
+const V2_LAYER_EDGE_CASES = {
+  L0:LAYER_EDGE_CASES.L0,
+  L1:LAYER_EDGE_CASES.L1,
+  L2:['Modular: Tier Upgrade price delta','Modular M01/M07: View-only','Flex Base Variable: SI + Family type + Coverage features (F14)','Flex Base Fixed: View-only + wallet for enhancements','Downgrade warning on tier change','Coverage feature toggles (Maternity, OPD, Room Rent) conditional on SI'],
+  L3:['Family structure pre-defined by L2 choices','Data mismatch: Dependent selection UI (EC-NEW-01)','Parent addition: Inline premium flag','Parent age > 80: Block','Member count validated against L2 family type'],
+  L4:['Sub-section A: Base Top-ups','Sub-section B: Secondary Plans & their Top-ups','Sub-section C: Add-ons with per-member coverage','Parental coverage as pre-selected (EC02)','Min part badge per component','Wallet usage callouts per sub-section'],
+  L5:LAYER_EDGE_CASES.L5,
+  L6:LAYER_EDGE_CASES.L6,
+};
+
+const COVERAGE_FEATURES = [
+  {id:'maternity',name:'Maternity Cover',desc:'Covers delivery, pre/post natal',cost:3600,minSI:'5L'},
+  {id:'roomRent',name:'Room Rent Waiver',desc:'No room rent capping',cost:2400,minSI:'7L'},
+  {id:'opd',name:'OPD Cover',desc:'Outpatient consultations',cost:2400,minSI:'5L'},
+  {id:'daycare',name:'Daycare Procedures',desc:'Extended daycare coverage',cost:1800,minSI:'3L'},
+  {id:'intlCover',name:'International Cover',desc:'Treatment abroad',cost:6000,minSI:'10L'},
+];
+
+const V2FlowEngine = {
+  getLayerVisibility:(config)=>{
+    const layers={
+      L0:{show:true,type:'view',reason:'Always shown - Welcome'},
+      L1:{show:true,type:'view',reason:'Always shown - Base Coverage'},
+      L2:{show:false,type:'skip',reason:'Plan Configuration'},
+      L3:{show:true,type:'conditional',reason:'Family enrollment'},
+      L4:{show:false,type:'skip',reason:'Enhancement Options'},
+      L5:{show:false,type:'skip',reason:'Premium & Payment'},
+      L6:{show:true,type:'decision',reason:'Always shown - Review & Consent'}
+    };
+    if(config.construct==='MODULAR'){
+      layers.L2.show=true;
+      const isViewOnly=!config.topUp||config.topUp===null;
+      layers.L2.type=isViewOnly?'view':'decision';
+      layers.L2.reason=isViewOnly?'View assigned tier (no upgrade)':'Tier Upgrade selection + family type';
+    }
+    if(config.construct==='FLEX'){
+      layers.L2.show=true;
+      const isBaseFixed=config.base==='base-fixed';
+      layers.L2.type=isBaseFixed?'view':'decision';
+      layers.L2.reason=isBaseFixed?'Base Fixed — view coverage, set family type':'Base Variable — configure SI, Family, Coverage Features';
+    }
+    layers.L3.type=config.construct==='FLEX'?'decision':'conditional';
+    layers.L3.reason='Enter member details based on L2 family configuration';
+    if(config.topUp||config.secondary||config.addOns){
+      layers.L4.show=true;
+      const r=[];if(config.topUp)r.push('Top-ups');if(config.secondary)r.push('Secondary');if(config.addOns)r.push('Add-ons');
+      layers.L4.type=FlowEngine.hasEmployeePaidEnhancements(config)?'decision':'view';
+      layers.L4.reason=`Sub-sections: ${r.join(' | ')}`;
+    }
+    if(FlowEngine.hasEmployeePayment(config)){layers.L5.show=true;layers.L5.type='decision';layers.L5.reason='Employee payment required';}
+    return layers;
+  },
+  getLayerDecision:(config)=>{
+    const d={L0:'V',L1:'V',L2:'S',L3:'C',L4:'S',L5:'S',L6:'D'};
+    if(config.construct==='MODULAR')d.L2=config.topUp?'D':'V';
+    if(config.construct==='FLEX')d.L2=config.base==='base-variable'?'D':'V';
+    d.L3=config.construct==='FLEX'?'D':'C';
+    if(config.topUp||config.secondary||config.addOns)d.L4=FlowEngine.hasEmployeePaidEnhancements(config)?'D':'V';
+    if(FlowEngine.hasEmployeePayment(config))d.L5='D';
+    return d;
+  },
+  getLayerComponents:(config,layer)=>{
+    const C=UI_COMPONENTS,comps=[];
+    switch(layer){
+      case'L0':comps.push({...C.C01,variant:'horizontal',state:'active'});break;
+      case'L1':comps.push({...C.C02,variant:'view-only',state:'default'});if(config.construct==='FLEX')comps.push({...C.C10,variant:'banner',state:'full'});break;
+      case'L2':
+        if(config.construct==='MODULAR'){const isVO=!config.topUp;comps.push({...C.C03,variant:isVO?'view-only':'tier-cards',state:'default'});if(!isVO)comps.push({...C.C17,variant:'side-by-side',state:'interactive'});}
+        else if(config.construct==='FLEX'){const isBF=config.base==='base-fixed';comps.push({...C.C03,variant:isBF?'view-only':'configurator',state:'default'});comps.push({...C.C10,variant:isBF?'banner':'detailed',state:isBF?'full':'partial'});}
+        comps.push({...C.C06,variant:'inline',state:'calculated'});break;
+      case'L3':comps.push({...C.C04,variant:'compact',state:'view'},{...C.C05,variant:'add',state:'empty'});break;
+      case'L4':
+        if(config.topUp)comps.push({...C.C08,variant:config.topUp==='tier-upgrade'?'tier-upgrade':'standard',state:'available'});
+        if(config.secondary)comps.push({...C.C09,variant:config.secondary==='multi'?'multi-plan':'single',state:'available'});
+        if(config.addOns)comps.push({...C.C07,variant:'toggle',state:'available'});
+        if(config.construct==='FLEX')comps.push({...C.C10,variant:'inline',state:'partial'});break;
+      case'L5':comps.push({...C.C06,variant:'detailed',state:'calculated'});if(config.construct==='FLEX')comps.push({...C.C10,variant:'detailed',state:'exceeded'});break;
+      case'L6':comps.push({...C.C12,variant:'detailed',state:'editable'},{...C.C04,variant:'compact',state:'view'},{...C.C11,variant:'standard',state:'unchecked'});break;
+    }
+    comps.push({...C.C14,variant:'popover',state:'closed'},{...C.C15,variant:'inline',state:'hidden'});
+    return comps;
+  },
+  generateTestScenarios:(config,comboId)=>{
+    const scenarios=[],layers=V2FlowEngine.getLayerVisibility(config);
+    scenarios.push({id:`${comboId}-FLOW-01`,name:'Happy Path (Reordered)',type:'flow',steps:Object.entries(layers).filter(([_,v])=>v.show).map(([l,v])=>({layer:l,action:v.type==='decision'?'Make selection':'View and continue',expected:`${l} (${V2_LAYER_META[l]?.shortName}) renders correctly`})),priority:'P0'});
+    scenarios.push({id:`${comboId}-FLOW-02`,name:'Drop-off & Resume',type:'flow',steps:[{layer:'L0-L2',action:'Complete config',expected:'Draft saved'},{layer:'L3',action:'Close mid-flow',expected:'Draft persisted'},{layer:'Resume',action:'Reopen',expected:'Resume from L3'}],priority:'P1'});
+    if(FlowEngine.hasEmployeePayment(config))scenarios.push({id:`${comboId}-PREMIUM-01`,name:'Premium Accuracy',type:'premium',steps:[{action:'Make selections in L2',expected:'Premium updates real-time'},{action:'Change selection',expected:'Premium recalculates'},{action:'View breakdown in L5',expected:'Split shown correctly'}],priority:'P0'});
+    if(config.construct==='FLEX')scenarios.push({id:`${comboId}-WALLET-01`,name:'Wallet Balance',type:'wallet',steps:[{action:'View L1',expected:'Wallet shown'},{action:'Configure in L2',expected:'Wallet updates'},{action:'Exceed wallet',expected:'Overflow + consent in L5'}],priority:'P0'});
+    if(config.construct==='FLEX'&&config.base==='base-variable')scenarios.push({id:`${comboId}-F14-01`,name:'Coverage Features (F14)',type:'flow',steps:[{layer:'L2',action:'Select SI ≥ ₹5L',expected:'Maternity, OPD toggles appear'},{layer:'L2',action:'Toggle Maternity on',expected:'Wallet updates, premium recalcs'},{layer:'L2',action:'Toggle Room Rent',expected:'Requires SI ≥ ₹7L validation'}],priority:'P1'});
+    const hasMinPart=config.minPart_topUp||config.minPart_secondary||config.minPart_addOns;
+    if(hasMinPart)scenarios.push({id:`${comboId}-MP-01`,name:'Min Participation (component)',type:'system',steps:[{action:'Complete enrollment',expected:'Component-level pending status'},{action:'Check e-card',expected:'Pending per component'}],priority:'P1'});
+    scenarios.push({id:`${comboId}-ECARD-01`,name:'E-card Generation',type:'system',steps:[{action:'Submit',expected:hasMinPart?'Pending (component-level)':config.cdCheck?'CD check initiated':'E-card generated'}],priority:'P0'});
+    return scenarios;
+  },
+  getContentRequirements:(config,layer,tone)=>{
+    const mapped={L0:'L0',L1:'L1',L2:'L3',L3:'L2',L4:'L4',L5:'L5',L6:'L6'};
+    if(layer==='L2'){
+      const c={headline:'',subtext:'',cta_primary:'Continue',cta_secondary:'',tooltips:['Tier','Sum Insured','Family Type'],anxiety_reducers:[]};
+      const t=tone||({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]);
+      if(config.construct==='MODULAR'){
+        const isVO=!config.topUp;
+        if(t==='info'){c.headline=isVO?'Assigned plan':'Select a tier';c.subtext=isVO?'Review your plan and set family type':'Available tiers';}
+        else if(t==='awareness'){c.headline=isVO?'Your assigned plan':'Upgrade your plan';c.subtext=isVO?'Review your coverage and choose family configuration':'Choose a higher tier + set who is covered';}
+        else{c.headline=isVO?'Your assigned plan':'Unlock better protection';c.subtext=isVO?'Review your coverage details':'See how upgrading your tier expands your coverage. Choose your family type.';}
+      } else if(config.construct==='FLEX'){
+        const isBF=config.base==='base-fixed';
+        if(t==='info'){c.headline=isBF?'Base coverage':'Configure coverage';c.subtext=isBF?'Set your family type':'Select SI, family type, and features';}
+        else if(t==='awareness'){c.headline=isBF?'Your base coverage':'Configure your coverage';c.subtext=isBF?'Choose who is covered':'Select Sum Insured, family structure, and coverage features';}
+        else{c.headline=isBF?'Your base plan':'Build your ideal coverage';c.subtext=isBF?'Fully covered by your wallet. Set your family type.':'Choose your coverage amount, who is covered, and additional features. All within your wallet = free.';c.anxiety_reducers=['Compare plans side-by-side','Every choice updates your wallet in real-time'];}
+      }
+      return c;
+    }
+    if(layer==='L3'){
+      const c={headline:'',subtext:'',cta_primary:'Continue',cta_secondary:'+ Add another member',tooltips:['Dependent','Relationship'],anxiety_reducers:[]};
+      const t=tone||({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]);
+      if(t==='info'){c.headline='Enter family details';c.subtext='Add member information based on your plan configuration';}
+      else if(t==='awareness'){c.headline='Add your family members';c.subtext='Enter details for the family members you selected in the previous step';}
+      else{c.headline="Who's covered?";c.subtext='Enter details for each person covered under your plan';c.anxiety_reducers=['Family changes affect wallet allocation'];}
+      return c;
+    }
+    return FlowEngine.getContentRequirements(config,mapped[layer]||layer,tone);
+  }
+};
+
+const V2RFQEngine = {
+  getConstructRules:(construct)=>{
+    if(construct==='VANILLA')return{base:['fixed'],wallet:['no'],topUp:['none','standard','consolidated'],secondary:['none','single','multi','si-variants'],payment:['employer','employee','partial']};
+    if(construct==='MODULAR')return{base:['tier-selectable','tier-selectable-grade'],wallet:['yes','no'],topUp:['none','tier-upgrade'],secondary:['none','single'],payment:['employer','employee','partial']};
+    if(construct==='FLEX')return{base:['base-variable','base-fixed'],wallet:['yes'],topUp:['none','standard','consolidated'],secondary:['none','single','multi'],payment:['wallet','wallet-employee','employee']};
+    return{base:['any'],wallet:['any'],topUp:['any'],secondary:['any'],payment:['any']};
+  },
+  getBaseRules:(construct,base)=>{
+    if(construct==='FLEX'&&base==='base-variable')return{topUp:['none'],secondary:['none','single','multi','si-variants'],addOns:['none','available']};
+    if(construct==='FLEX'&&base==='base-fixed')return{topUp:['none','standard','consolidated'],secondary:['none','single'],addOns:['none','available','wellness']};
+    if(construct==='MODULAR')return{topUp:['none','tier-upgrade'],secondary:['none','single'],addOns:['none','available']};
+    return{topUp:['none','standard','consolidated'],secondary:['none','single','multi','si-variants'],addOns:['none','available','wellness']};
+  },
+  matchCombinations:(rfq,exactOnly=true)=>{
+    const r=[];
+    Object.entries(POLICY_COMBINATIONS).forEach(([id,config])=>{
+      const{score,matches,mismatches}=V2RFQEngine.scoreMatch(rfq,config);
+      if(exactOnly?score===100:score>0)r.push({comboId:id,config,score,matches,mismatches,name:config.name});
+    });
+    return r.sort((a,b)=>b.score-a.score);
+  },
+  scoreMatch:(rfq,config)=>{
+    let s=0,mx=0;const m=[],mm=[];
+    if(rfq.construct&&rfq.construct!=='any'){mx+=25;if(rfq.construct===config.construct){s+=25;m.push(`Construct: ${config.construct}`);}else mm.push(`Construct: wanted ${rfq.construct}`);}
+    if(rfq.base&&rfq.base!=='any'){mx+=15;if(rfq.base===config.base){s+=15;m.push(`Base: ${config.base}`);}else mm.push(`Base mismatch`);}
+    if(rfq.topUp&&rfq.topUp!=='any'){mx+=10;const w=rfq.topUp==='none'?null:rfq.topUp;if(w===null?!config.topUp:config.topUp===w){s+=10;m.push(config.topUp?`Top-up: ${config.topUp}`:'No top-up');}else mm.push('Top-up mismatch');}
+    if(rfq.secondary&&rfq.secondary!=='any'){mx+=10;const w=rfq.secondary==='none'?null:rfq.secondary;if(w===null?!config.secondary:config.secondary===w){s+=10;m.push(config.secondary?`Secondary: ${config.secondary}`:'No secondary');}else mm.push('Secondary mismatch');}
+    if(rfq.addOns&&rfq.addOns!=='any'){mx+=10;const w=rfq.addOns==='none'?null:rfq.addOns;if(w===null?!config.addOns:!!config.addOns){s+=10;m.push(config.addOns?'Add-ons: yes':'No add-ons');}else mm.push('Add-ons mismatch');}
+    if(rfq.basePay&&rfq.basePay!=='any'){mx+=10;if(rfq.basePay===config.basePay){s+=10;m.push(`Base pay: ${config.basePay}`);}else mm.push('Base pay mismatch');}
+    if(rfq.wallet&&rfq.wallet!=='any'){mx+=10;const hasWallet=config.construct==='FLEX'||(config.construct==='MODULAR'&&['wallet','wallet-employee'].includes(config.basePay));const wantWallet=rfq.wallet==='yes';if(wantWallet===hasWallet){s+=10;m.push(`Wallet: ${wantWallet?'Yes':'No'}`);}else mm.push('Wallet mismatch');}
+    [{key:'minPart',label:'Min Part',val:config.minPart_topUp||config.minPart_secondary||config.minPart_addOns},{key:'preEnroll',label:'Pre-Enrollment',val:config.preEnroll},{key:'cdCheck',label:'CD Check',val:config.cdCheck}].forEach(f=>{if(rfq[f.key]&&rfq[f.key]!=='any'){mx+=5;const w=rfq[f.key]==='yes';if(w===f.val){s+=5;m.push(`${f.label}: ${w?'Yes':'No'}`);}else mm.push(`${f.label} mismatch`);}});
+    return{score:mx>0?Math.round((s/mx)*100):100,matches:m,mismatches:mm};
+  }
+};
+
+const V2RFQBuilder = ({ onSelectCombo, onMatchResults }) => {
+  const [rfq, setRfq] = useState({construct:'any',base:'any',topUp:'any',secondary:'any',addOns:'any',basePay:'any',wallet:'any',minPart:'any',preEnroll:'any',cdCheck:'any'});
+  const [results, setResults] = useState(null);
+  const [showResults, setShowResults] = useState(false);
+  const [exactMode, setExactMode] = useState(true);
+  
+  const rules = useMemo(()=>rfq.construct!=='any'?V2RFQEngine.getConstructRules(rfq.construct):null,[rfq.construct]);
+  const baseRules = useMemo(()=>(rfq.construct!=='any'&&rfq.base!=='any')?V2RFQEngine.getBaseRules(rfq.construct,rfq.base):null,[rfq.construct,rfq.base]);
+  
+  const handleConstructChange = (v) => {
+    const n={...rfq,construct:v};
+    if(v!=='any'){
+      const r=V2RFQEngine.getConstructRules(v);
+      if(r.base.length===1)n.base=r.base[0];else n.base='any';
+      if(r.wallet.length===1)n.wallet=r.wallet[0];else n.wallet='any';
+      n.topUp='any';n.secondary='any';n.addOns='any';n.basePay='any';
+    }else{n.base='any';n.wallet='any';n.topUp='any';n.secondary='any';n.addOns='any';n.basePay='any';}
+    setRfq(n);setResults(null);setShowResults(false);
+  };
+  const handleBaseChange = (v) => {
+    const n={...rfq,base:v,topUp:'any',secondary:'any',addOns:'any'};
+    setRfq(n);setResults(null);setShowResults(false);
+  };
+  const handleMatch = () => {const m=V2RFQEngine.matchCombinations(rfq,exactMode);setResults(m);setShowResults(true);if(onMatchResults)onMatchResults(m);};
+  const resetRfq = () => {setRfq({construct:'any',base:'any',topUp:'any',secondary:'any',addOns:'any',basePay:'any',wallet:'any',minPart:'any',preEnroll:'any',cdCheck:'any'});setResults(null);setShowResults(false);};
+  
+  const Sel = ({label,value,onChange,options,icon:I,locked,hint}) => (<div className={locked?'opacity-50':''}>
+    <label className="block text-xs font-medium text-onyx-500 mb-1.5 flex items-center gap-1"><I size={12}/>{label}{locked&&<span className="text-[9px] text-purple-600 ml-1">AUTO</span>}</label>
+    <select value={value} onChange={e=>onChange(e.target.value)} disabled={locked} className={`acko-input text-sm ${locked?'bg-onyx-100 cursor-not-allowed':''}`}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
+    {hint&&<div className="text-[10px] text-purple-600 mt-0.5">{hint}</div>}
+  </div>);
+  
+  const topUpOpts=baseRules?[{value:'any',label:'Any'},...baseRules.topUp.map(v=>({value:v,label:v==='none'?'None':v==='standard'?'Standard':v==='tier-upgrade'?'Tier Upgrade':v==='consolidated'?'Consolidated':v}))]:[{value:'any',label:'Any'},{value:'none',label:'None'},{value:'standard',label:'Standard'},{value:'tier-upgrade',label:'Tier Upgrade'},{value:'consolidated',label:'Consolidated'}];
+  const secOpts=baseRules?[{value:'any',label:'Any'},...baseRules.secondary.map(v=>({value:v,label:v==='none'?'None':v==='single'?'Single':v==='multi'?'Multiple':v==='si-variants'?'SI Variants':v}))]:[{value:'any',label:'Any'},{value:'none',label:'None'},{value:'single',label:'Single'},{value:'multi',label:'Multiple'},{value:'si-variants',label:'SI Variants'}];
+  const addOnOpts=baseRules?[{value:'any',label:'Any'},...baseRules.addOns.map(v=>({value:v,label:v==='none'?'None':v==='available'?'Available':v==='wellness'?'Wellness':v}))]:[{value:'any',label:'Any'},{value:'none',label:'None'},{value:'available',label:'Available'},{value:'wellness',label:'Wellness'}];
+  const payOpts=rules?[{value:'any',label:'Any'},...rules.payment.map(v=>({value:v,label:v.charAt(0).toUpperCase()+v.slice(1)}))]:[{value:'any',label:'Any'},{value:'employer',label:'Employer'},{value:'employee',label:'Employee'},{value:'partial',label:'Partial'},{value:'wallet',label:'Wallet'},{value:'wallet-employee',label:'Wallet+Employee'}];
+  const walletOpts=rules?[{value:'any',label:'Any'},...rules.wallet.map(v=>({value:v,label:v==='yes'?'Yes':'No'}))]:[{value:'any',label:'Any'},{value:'yes',label:'Yes'},{value:'no',label:'No'}];
+  const baseOpts=rules?[{value:'any',label:'Any'},...rules.base.map(v=>({value:v,label:v==='fixed'?'Fixed':v==='tier-selectable'?'Tier-Selectable':v==='tier-selectable-grade'?'Tier+Grade':v==='base-variable'?'Base Variable':v==='base-fixed'?'Base Fixed':v}))]:[{value:'any',label:'Any'},{value:'fixed',label:'Fixed'},{value:'tier-selectable',label:'Tier-Selectable'},{value:'base-variable',label:'Base Variable'},{value:'base-fixed',label:'Base Fixed'}];
+  
+  return(
+    <div className="space-y-6">
+      <div className="acko-card p-6 bg-white">
+        <div className="flex items-center justify-between mb-6"><h3 className="font-semibold flex items-center gap-2 text-onyx-800"><Search size={20} className="text-orange-500"/>Deductive RFQ Matcher <span className="text-xs bg-orange-200 text-orange-700 px-2 py-0.5 rounded-full font-bold">v2</span></h3><div className="flex items-center gap-4"><label className="flex items-center gap-2 cursor-pointer"><div onClick={()=>setExactMode(!exactMode)} className={`toggle-track ${exactMode?'on':'off'}`}><div className="toggle-thumb"/></div><span className="text-xs text-onyx-600">{exactMode?'Exact Match':'Explore Similar'}</span></label><button onClick={resetRfq} className="text-xs text-onyx-500 hover:text-purple-600 flex items-center gap-1"><X size={14}/>Reset</button></div></div>
+        <div className="mb-1 text-[10px] text-purple-600 bg-purple-100 rounded-lg px-3 py-2 flex items-center gap-2"><Info size={12}/>Cascading logic: selecting Construct auto-narrows Base, Wallet, and available options. No grade-based filter.</div>
+        <div className="mb-5 mt-4"><div className="text-xs font-bold text-purple-700 uppercase tracking-wide mb-3 flex items-center gap-2"><Layers size={14}/>Construct Parameters</div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Sel label="Construct" icon={Layers} value={rfq.construct} onChange={handleConstructChange} options={[{value:'any',label:'Any'},{value:'VANILLA',label:'Vanilla'},{value:'MODULAR',label:'Modular'},{value:'FLEX',label:'Flex'}]} hint={rfq.construct!=='any'?`→ narrows all fields`:undefined}/>
+          <Sel label="Base Plan" icon={Shield} value={rfq.base} onChange={handleBaseChange} options={baseOpts} locked={rules&&rules.base.length===1} hint={rules&&rules.base.length===1?`Fixed for ${rfq.construct}`:undefined}/>
+          <Sel label="Wallet" icon={Wallet} value={rfq.wallet} onChange={v=>setRfq(p=>({...p,wallet:v}))} options={walletOpts} locked={rules&&rules.wallet.length===1} hint={rules&&rules.wallet.length===1?`${rfq.wallet==='yes'?'Required':'Not available'} for ${rfq.construct}`:undefined}/>
+          <Sel label="Top-up" icon={Shield} value={rfq.topUp} onChange={v=>setRfq(p=>({...p,topUp:v}))} options={topUpOpts}/>
+          <Sel label="Secondary" icon={Users} value={rfq.secondary} onChange={v=>setRfq(p=>({...p,secondary:v}))} options={secOpts}/>
+          <Sel label="Add-ons" icon={Heart} value={rfq.addOns} onChange={v=>setRfq(p=>({...p,addOns:v}))} options={addOnOpts}/>
+        </div></div>
+        <div className="mb-5"><div className="text-xs font-bold text-green-700 uppercase tracking-wide mb-3 flex items-center gap-2"><CreditCard size={14}/>Payment</div><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Sel label="Base Paid By" icon={CreditCard} value={rfq.basePay} onChange={v=>setRfq(p=>({...p,basePay:v}))} options={payOpts}/>
+        </div></div>
+        <div className="mb-6"><div className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-3 flex items-center gap-2"><Tag size={14}/>Post-Construct Modifiers</div><div className="grid grid-cols-3 gap-3">
+          <Sel label="Min Participation" icon={Target} value={rfq.minPart} onChange={v=>setRfq(p=>({...p,minPart:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Required'},{value:'no',label:'Not Required'}]}/>
+          <Sel label="Pre-Enrollment" icon={Clock} value={rfq.preEnroll} onChange={v=>setRfq(p=>({...p,preEnroll:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/>
+          <Sel label="CD Check" icon={CreditCard} value={rfq.cdCheck} onChange={v=>setRfq(p=>({...p,cdCheck:v}))} options={[{value:'any',label:"Don't Care"},{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/>
+        </div></div>
+        <div className="flex items-center gap-4"><button onClick={handleMatch} className="acko-btn bg-orange-500 text-white hover:bg-orange-600 px-8 font-semibold"><Search size={16} className="mr-2"/>Find Matching Combinations</button><span className="text-xs text-onyx-400">{exactMode?'Showing only 100% exact matches':'Showing all matches ranked by score'}</span></div>
+      </div>
+      {showResults&&results&&(
+        <div className="acko-card p-6 bg-white fade-in-up">
+          <h3 className="font-semibold mb-4 flex items-center gap-2 text-onyx-800"><Zap size={20} className="text-orange-500"/>{results.length} Match{results.length!==1?'es':''} Found</h3>
+          {results.length===0?<div className="text-center py-8 text-onyx-500"><AlertCircle size={32} className="mx-auto mb-2 text-onyx-400"/><p>{exactMode?'No exact matches. Try "Explore Similar" or relax criteria.':'No matches.'}</p></div>:(
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">{results.map(r=>{const mi=RFQEngine.getMatchLabel(r.score);return(<button key={r.comboId} onClick={()=>onSelectCombo(r.comboId)} className="w-full text-left p-4 border border-onyx-300 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all group"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-3"><span className="font-mono font-bold text-lg text-orange-700">{r.comboId}</span><span className={`px-2 py-1 rounded text-xs font-medium ${r.config.construct==='VANILLA'?'bg-green-200 text-green-700':r.config.construct==='MODULAR'?'bg-orange-200 text-orange-700':'bg-purple-200 text-purple-700'}`}>{r.config.construct}</span></div><div className="flex items-center gap-3">{!exactMode&&<span className={`px-3 py-1 rounded-full text-xs font-bold ${mi.color}`}>{r.score}% {mi.label}</span>}<ChevronRight size={18} className="text-onyx-400 group-hover:text-orange-600"/></div></div><div className="text-sm text-onyx-600 mb-2">{r.name}</div><div className="flex flex-wrap gap-1">{r.matches.slice(0,5).map((m,i)=><span key={i} className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full">{m}</span>)}{r.mismatches.slice(0,3).map((m,i)=><span key={i} className="text-[10px] px-2 py-0.5 bg-cerise-200 text-cerise-700 rounded-full">{m}</span>)}</div></button>);})}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const V2MobileSimulator = ({ config, layers, comboId }) => {
+  const visibleLayers = useMemo(() => Object.entries(layers).filter(([_, v]) => v.show), [layers]);
+  const [idx, setIdx] = useState(0);
+  const [members, setMembers] = useState([{id:1,name:'Employee',relation:'Self',age:32,gender:'Male'},{id:2,name:'Spouse',relation:'Spouse',age:30,gender:'Female'}]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newMember, setNewMember] = useState({name:'',relation:'',age:'',gender:''});
+  const [selectedTier, setSelectedTier] = useState(0);
+  const [selectedSI, setSelectedSI] = useState('5L');
+  const [selectedFamilyType, setSelectedFamilyType] = useState(2);
+  const [coverageFeatures, setCoverageFeatures] = useState({maternity:false,roomRent:false,opd:false,daycare:false,intlCover:false});
+  const [topUpEnabled, setTopUpEnabled] = useState(false);
+  const [secondaryEnabled, setSecondaryEnabled] = useState(false);
+  const [addOns, setAddOns] = useState({opd:false,dental:false,wellness:false});
+  const [consentTerms, setConsentTerms] = useState(false);
+  const [consentSalary, setConsentSalary] = useState(false);
+  const [consentWallet, setConsentWallet] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [contentTone, setContentTone] = useState({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]||'info');
+  const [l4Section, setL4Section] = useState('topups');
+  
+  const activeLayer = visibleLayers[idx]?.[0] || 'L0';
+  const layerNames = visibleLayers.map(([l]) => V2_LAYER_META[l]?.shortName || l);
+  const featureCost = useMemo(()=>{let c=0;Object.entries(coverageFeatures).forEach(([k,on])=>{if(on){const f=COVERAGE_FEATURES.find(f=>f.id===k);if(f)c+=f.cost;}});return c;},[coverageFeatures]);
+  const state = {members,selectedTier,selectedSI,selectedFamilyDef:selectedFamilyType,topUpEnabled,secondaryEnabled,addOns};
+  const premium = useMemo(() => {const p=PremiumCalc.calculate(state,config);return{...p,total:p.total+featureCost,employeePays:config.construct==='FLEX'?Math.max(0,p.total+featureCost-PremiumCalc.WALLET_TOTAL):p.employeePays+featureCost,walletUsed:config.construct==='FLEX'?Math.min(p.total+featureCost,PremiumCalc.WALLET_TOTAL):p.walletUsed,walletOverflow:config.construct==='FLEX'?Math.max(0,p.total+featureCost-PremiumCalc.WALLET_TOTAL):p.walletOverflow,walletRemaining:config.construct==='FLEX'?Math.max(0,PremiumCalc.WALLET_TOTAL-Math.min(p.total+featureCost,PremiumCalc.WALLET_TOTAL)):p.walletRemaining,monthlyEmployee:Math.round((config.construct==='FLEX'?Math.max(0,p.total+featureCost-PremiumCalc.WALLET_TOTAL):p.employeePays+featureCost)/12)};}, [members,selectedTier,selectedSI,topUpEnabled,secondaryEnabled,addOns,config,featureCost]);
+  const content = useMemo(() => V2FlowEngine.getContentRequirements(config,activeLayer,contentTone), [config,activeLayer,contentTone]);
+  const decisions = V2FlowEngine.getLayerDecision(config);
+  
+  const configKey = comboId+config.construct;
+  const [prevKey, setPrevKey] = useState(configKey);
+  if(configKey!==prevKey){
+    setPrevKey(configKey);setIdx(0);setSubmitted(false);setConsentTerms(false);setConsentSalary(false);setConsentWallet(false);
+    setContentTone({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]||'info');
+    setTopUpEnabled(false);setSecondaryEnabled(false);setAddOns({opd:false,dental:false,wellness:false});
+    setSelectedTier(0);setSelectedSI('5L');setSelectedFamilyType(2);setErrors({});setL4Section('topups');
+    setCoverageFeatures({maternity:false,roomRent:false,opd:false,daycare:false,intlCover:false});
+    setMembers([{id:1,name:'Employee',relation:'Self',age:32,gender:'Male'},{id:2,name:'Spouse',relation:'Spouse',age:30,gender:'Female'}]);
+  }
+  
+  const siNum = (si) => parseInt(si.replace('L',''));
+  
+  const validate = () => {const e={};if(activeLayer==='L3'&&members.length===0)e.members='At least one member required';if(activeLayer==='L6'){if(!consentTerms)e.consent='Please accept terms';if(FlowEngine.hasEmployeePayment(config)&&premium.employeePays>0&&!consentSalary)e.salary='Consent to salary deduction';if(config.construct==='FLEX'&&premium.walletOverflow>0&&!consentWallet)e.wallet='Acknowledge wallet overflow';}setErrors(e);return Object.keys(e).length===0;};
+  const goNext = () => {if(activeLayer==='L6'){if(validate())setSubmitted(true);}else{if(validate())setIdx(Math.min(visibleLayers.length-1,idx+1));}};
+  const goBack = () => {setIdx(Math.max(0,idx-1));setErrors({});};
+  const goToLayer = (i) => {if(i<=idx){setIdx(i);setErrors({});}};
+  const restart = () => {setIdx(0);setSubmitted(false);setConsentTerms(false);setConsentSalary(false);setConsentWallet(false);setErrors({});};
+  
+  const addMember = () => {
+    if(!newMember.name||!newMember.relation){setErrors({addForm:'Name and relation required'});return;}
+    if(members.length>=6){setErrors({addForm:'Max 6 members'});return;}
+    const age=parseInt(newMember.age)||0;
+    if(newMember.relation==='Parent'&&age>80){setErrors({addForm:'Parent age max 80'});return;}
+    if(newMember.relation==='Child'&&age>25){setErrors({addForm:'Child age max 25'});return;}
+    setMembers([...members,{id:Date.now(),...newMember,age}]);setNewMember({name:'',relation:'',age:'',gender:''});setShowAddForm(false);setErrors({});
+  };
+  const removeMember = (id) => {if(members.find(m=>m.id===id)?.relation==='Self')return;setMembers(members.filter(m=>m.id!==id));};
+  
+  const ctaText = activeLayer==='L6'?(config.preEnroll?'Submit Preferences':'Confirm Enrollment'):activeLayer==='L0'?'Get Started':'Continue';
+  
+  const familyTypes = ['Self only','Self + Spouse','Self + Family','Self + Family + Parents'];
+  
+  const renderScreen = () => {
+    if(submitted) return (
+      <div className="px-5 py-8 text-center space-y-4 fade-in-up">
+        <div className="w-20 h-20 rounded-full bg-green-200 flex items-center justify-center mx-auto"><CheckCircle2 size={40} className="text-green-700"/></div>
+        <h2 className="text-xl font-bold text-onyx-800">{config.preEnroll?'Preferences Submitted!':'Enrollment Confirmed!'}</h2>
+        <p className="text-sm text-onyx-500">{config.preEnroll?'Your preferences have been recorded.':'Your e-card has been generated!'}</p>
+        <button onClick={restart} className="acko-btn bg-purple-600 text-white px-6 mx-auto"><RefreshCw size={16} className="mr-2"/>Start Over</button>
+      </div>
+    );
+    
+    switch(activeLayer){
+      case 'L0': return (
+        <div className="px-5 py-4 space-y-5 pb-2">
+          <div className="flex items-center gap-2 mb-2"><div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center"><Shield size={16} className="text-white"/></div><span className="font-bold text-sm text-purple-800">acko health</span></div>
+          <div><h2 className="text-xl font-bold text-onyx-800 leading-tight">{content.headline}</h2><p className="text-sm text-onyx-500 mt-1">{content.subtext}</p></div>
+          <div className="bg-purple-100 rounded-xl p-4"><div className="text-xs font-semibold text-purple-700 mb-3 uppercase tracking-wide">What to expect</div><div className="space-y-3">{visibleLayers.map(([l],i)=>(<div key={l} className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center text-xs font-bold">{i+1}</div><div><span className="text-sm text-onyx-700 font-medium">{V2_LAYER_META[l]?.name}</span><div className="text-[10px] text-onyx-400">{V2_LAYER_META[l]?.purpose}</div></div></div>))}</div></div>
+          <div className="border-l-4 border-orange-400 bg-orange-100 rounded-r-xl p-3 text-xs text-orange-800 flex items-center gap-2"><Zap size={14}/>Updated flow: Configure plan first, then add family details</div>
+          {content.anxiety_reducers?.map((t,i) => <div key={i} className="flex items-center gap-2 text-xs text-green-700 bg-green-100 rounded-lg px-3 py-2"><CheckCircle2 size={14}/>{t}</div>)}
+        </div>
+      );
+      
+      case 'L1': return (
+        <div className="px-5 py-4 space-y-4 pb-2">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
+          {config.construct==='FLEX'&&<WalletBar used={0} total={PremiumCalc.WALLET_TOTAL}/>}
+          <div className="border border-onyx-300 rounded-xl p-4"><div className="flex justify-between items-start mb-3"><div><div className="text-2xl font-bold text-onyx-800">{config.construct==='FLEX'?`₹${(PremiumCalc.SI_COSTS[selectedSI]||12000).toLocaleString()}`:'₹5,00,000'}</div><div className="text-xs text-onyx-500">Sum Insured</div></div><span className="px-2 py-1 bg-blue-200 text-blue-700 rounded text-[10px] font-medium flex items-center gap-1"><Info size={10}/>Floater</span></div></div>
+          <div className="space-y-2"><div className="text-xs font-semibold text-onyx-600">KEY BENEFITS</div>{['Cashless at 10,000+ hospitals','Pre & Post hospitalization','Day care procedures','Ambulance charges'].map((b,i)=><div key={i} className="flex items-center gap-2 text-sm text-onyx-700"><CheckCircle2 size={14} className="text-green-500"/>{b}</div>)}</div>
+        </div>
+      );
+      
+      case 'L2': return (
+        <div className="px-5 py-4 space-y-4 pb-2">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
+          
+          {/* MODULAR: Tier selection */}
+          {config.construct==='MODULAR'&&config.topUp&&(
+            <div className="space-y-3">
+              {[{tier:'Silver',si:'₹3L',price:0,features:['Basic coverage','Cashless']},{tier:'Gold',si:'₹5L',price:500,features:['Enhanced coverage','Wider network','Room rent waiver']},{tier:'Platinum',si:'₹10L',price:1200,features:['Premium coverage','Global','No sub-limits']}].map((p,i)=>(
+                <div key={i} onClick={()=>setSelectedTier(i)} className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${selectedTier===i?'border-purple-600 bg-purple-50':'border-onyx-300 hover:border-purple-300'}`}>
+                  <div className="flex justify-between items-start mb-2"><div><div className="flex items-center gap-2"><span className="font-bold text-sm">{p.tier}</span>{selectedTier===i&&<span className="px-2 py-0.5 bg-purple-200 text-purple-700 rounded text-[10px] font-bold">SELECTED</span>}</div><div className="text-xs text-onyx-500 mt-0.5">{p.si} Sum Insured</div></div><div className={`font-bold text-sm ${i===0?'text-green-700':'text-orange-700'}`}>{i===0?'Included':`+₹${p.price}/mo`}</div></div>
+                  <div className="flex flex-wrap gap-1">{p.features.map((f,j)=><span key={j} className="text-[10px] px-2 py-0.5 bg-onyx-100 text-onyx-600 rounded-full">{f}</span>)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {config.construct==='MODULAR'&&!config.topUp&&(
+            <div className="border border-onyx-300 rounded-xl p-4">
+              <div className="text-sm font-semibold text-onyx-800 mb-1">Your Assigned Plan</div>
+              <div className="text-xs text-onyx-500 mb-3">Gold — ₹5L Sum Insured</div>
+              <div className="text-xs text-onyx-400 italic flex items-center gap-1"><Info size={12}/>Assigned by employer, cannot be changed</div>
+            </div>
+          )}
+          
+          {/* FLEX Base Variable: SI + Family + Coverage Features */}
+          {config.construct==='FLEX'&&config.base==='base-variable'&&(
+            <div className="space-y-4">
+              <WalletBar used={premium.walletUsed} total={PremiumCalc.WALLET_TOTAL}/>
+              <div className="border border-onyx-300 rounded-xl p-4">
+                <div className="text-xs font-semibold text-onyx-600 mb-3">SELECT SUM INSURED</div>
+                <div className="flex flex-wrap gap-2">{Object.keys(PremiumCalc.SI_COSTS).map(si=>(<button key={si} onClick={()=>{setSelectedSI(si);setErrors({});const num=siNum(si);setCoverageFeatures(prev=>{const n={...prev};COVERAGE_FEATURES.forEach(f=>{if(n[f.id]&&siNum(f.minSI)>num)n[f.id]=false;});return n;});}} className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${selectedSI===si?'border-purple-600 bg-purple-50 text-purple-700':'border-onyx-300 text-onyx-600 hover:border-purple-300'}`}>{si}</button>))}</div>
+              </div>
+              
+              {/* Coverage Features (F14) */}
+              <div className="border border-orange-300 rounded-xl p-4 bg-orange-50">
+                <div className="text-xs font-semibold text-orange-700 mb-3 flex items-center gap-2"><Zap size={14}/>COVERAGE FEATURES <span className="text-[9px] bg-orange-200 px-1.5 py-0.5 rounded">NEW — F14</span></div>
+                <div className="space-y-2">{COVERAGE_FEATURES.map(f=>{const eligible=siNum(selectedSI)>=siNum(f.minSI);return(
+                  <div key={f.id} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${coverageFeatures[f.id]?'border-purple-400 bg-purple-50':eligible?'border-onyx-200':'border-onyx-200 opacity-50'}`}>
+                    <div><div className="flex items-center gap-2"><span className="font-medium text-sm">{f.name}</span>{!eligible&&<span className="text-[9px] px-1.5 py-0.5 bg-cerise-200 text-cerise-700 rounded font-bold">Needs {f.minSI}+</span>}</div><div className="text-xs text-onyx-500">{f.desc} | ₹{f.cost.toLocaleString()}/yr</div></div>
+                    <Toggle on={coverageFeatures[f.id]} onToggle={()=>{if(!eligible){setErrors({feat:`${f.name} requires SI ≥ ${f.minSI}`});return;}setCoverageFeatures(p=>({...p,[f.id]:!p[f.id]}));setErrors({});}} disabled={!eligible}/>
+                  </div>
+                );})}</div>
+                {featureCost>0&&<div className="mt-3 bg-orange-200 rounded-lg p-2 text-xs text-orange-800 flex items-center gap-2"><CreditCard size={12}/>Feature cost: ₹{featureCost.toLocaleString()}/yr from wallet</div>}
+                {errors.feat&&<div className="text-xs text-cerise-700 bg-cerise-200 rounded-lg px-3 py-2 mt-2 flex items-center gap-2"><AlertCircle size={14}/>{errors.feat}</div>}
+              </div>
+            </div>
+          )}
+          
+          {/* FLEX Base Fixed: View only */}
+          {config.construct==='FLEX'&&config.base==='base-fixed'&&(
+            <div className="space-y-4">
+              <WalletBar used={0} total={PremiumCalc.WALLET_TOTAL}/>
+              <div className="border border-onyx-300 rounded-xl p-4">
+                <div className="text-sm font-semibold text-onyx-800 mb-1">Your Base Coverage</div>
+                <div className="text-2xl font-bold text-onyx-800">₹5,00,000</div>
+                <div className="text-xs text-onyx-500 mb-2">Fixed base plan</div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-purple-700 bg-purple-100 rounded-lg px-3 py-2"><Info size={14}/>Use your wallet for enhancements in later steps</div>
+            </div>
+          )}
+          
+          {/* Family Type Selector (all constructs in L2) */}
+          <div className="border border-onyx-300 rounded-xl p-4">
+            <div className="text-xs font-semibold text-onyx-600 mb-3">FAMILY COVERAGE TYPE</div>
+            {familyTypes.map((f,i)=>(<div key={i} onClick={()=>setSelectedFamilyType(i)} className={`flex items-center gap-3 p-3 rounded-lg mb-2 cursor-pointer transition-all ${selectedFamilyType===i?'bg-purple-50 border-2 border-purple-600':'border border-onyx-200 hover:border-purple-300'}`}><div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedFamilyType===i?'border-purple-600':'border-onyx-300'}`}>{selectedFamilyType===i&&<div className="w-3 h-3 rounded-full bg-purple-600"/>}</div><span className="text-sm text-onyx-700">{f}</span></div>))}
+            <div className="text-[10px] text-onyx-400 mt-2 flex items-center gap-1"><Info size={10}/>Family structure set here; add actual members in the next step</div>
+          </div>
+          
+          <div className="bg-onyx-100 rounded-xl p-3"><div className="flex justify-between text-sm"><span className="text-onyx-500">Premium impact</span><span className="font-semibold text-onyx-800">{config.construct==='FLEX'?`₹${premium.walletUsed.toLocaleString()} from wallet`:selectedTier>0?`+₹${[0,500,1200][selectedTier]}/month`:'Included'}</span></div>{featureCost>0&&<div className="flex justify-between text-xs mt-1"><span className="text-onyx-400">Coverage features</span><span className="text-orange-700 font-semibold">+₹{featureCost.toLocaleString()}/yr</span></div>}</div>
+        </div>
+      );
+      
+      case 'L3': return (
+        <div className="px-5 py-4 space-y-4 pb-2">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
+          <div className="bg-purple-100 rounded-lg p-2 text-xs text-purple-700 flex items-center gap-2"><Info size={12}/>Family type: <span className="font-bold">{familyTypes[selectedFamilyType]}</span> (set in previous step)</div>
+          {members.map((m,i) => (
+            <div key={m.id} className="border border-onyx-300 rounded-xl p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"><Users size={18} className="text-purple-600"/></div><div><div className="font-semibold text-sm text-onyx-800">{m.name}</div><div className="text-xs text-onyx-500">{m.relation} | {m.age} yrs | {m.gender}</div></div></div>{m.relation!=='Self'&&<button onClick={()=>removeMember(m.id)} className="text-xs text-cerise-700 p-1"><Trash2 size={16}/></button>}</div></div>
+          ))}
+          {errors.members&&<div className="text-xs text-cerise-700 bg-cerise-200 rounded-lg px-3 py-2 flex items-center gap-2"><AlertCircle size={14}/>{errors.members}</div>}
+          {showAddForm?(
+            <div className="border-2 border-purple-300 rounded-xl p-4 bg-purple-50 space-y-3">
+              <div className="text-sm font-semibold text-purple-700">Add Family Member</div>
+              <input placeholder="Name" value={newMember.name} onChange={e=>setNewMember({...newMember,name:e.target.value})} className="acko-input text-sm" style={{height:40}}/>
+              <select value={newMember.relation} onChange={e=>setNewMember({...newMember,relation:e.target.value})} className="acko-input text-sm" style={{height:40}}><option value="">Select Relationship</option><option>Spouse</option><option>Child</option><option>Parent</option><option>In-Law</option></select>
+              <div className="flex gap-2"><input placeholder="Age" type="number" value={newMember.age} onChange={e=>setNewMember({...newMember,age:e.target.value})} className="acko-input text-sm flex-1" style={{height:40}}/><select value={newMember.gender} onChange={e=>setNewMember({...newMember,gender:e.target.value})} className="acko-input text-sm flex-1" style={{height:40}}><option value="">Gender</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+              {errors.addForm&&<div className="text-xs text-cerise-700 flex items-center gap-1"><AlertCircle size={12}/>{errors.addForm}</div>}
+              <div className="flex gap-2"><button onClick={addMember} className="flex-1 bg-purple-600 text-white rounded-lg py-2 text-sm font-semibold">Add</button><button onClick={()=>{setShowAddForm(false);setErrors({});}} className="flex-1 border border-onyx-300 rounded-lg py-2 text-sm text-onyx-600">Cancel</button></div>
+            </div>
+          ):(
+            <button onClick={()=>setShowAddForm(true)} className="w-full border-2 border-dashed border-onyx-300 rounded-xl py-4 text-sm text-purple-600 font-medium hover:border-purple-400 hover:bg-purple-50 transition-all flex items-center justify-center gap-2"><Plus size={16}/>Add family member</button>
+          )}
+          {config.construct==='FLEX'&&<div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-100 rounded-lg px-3 py-2"><AlertTriangle size={14}/>Family changes affect wallet allocation</div>}
+        </div>
+      );
+      
+      case 'L4': return (
+        <div className="px-5 py-4 space-y-4 pb-2">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
+          {config.construct==='FLEX'&&<div className="flex items-center gap-3 bg-purple-100 rounded-xl p-3"><Wallet size={16} className="text-purple-600"/><div className="flex-1"><div className="text-xs text-purple-700 font-semibold">₹{premium.walletRemaining.toLocaleString()} remaining</div><WalletBar used={premium.walletUsed} total={PremiumCalc.WALLET_TOTAL} mini/></div></div>}
+          
+          {/* Sub-section tabs */}
+          <div className="flex bg-onyx-100 rounded-xl p-1 gap-1">
+            {[config.topUp&&{id:'topups',label:'Top-ups',icon:Shield},config.secondary&&{id:'secondary',label:'Secondary',icon:Users},config.addOns&&{id:'addons',label:'Add-ons',icon:Heart}].filter(Boolean).map(tab=>(<button key={tab.id} onClick={()=>setL4Section(tab.id)} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${l4Section===tab.id?'bg-white text-purple-700 shadow-sm':'text-onyx-600 hover:text-onyx-800'}`}><tab.icon size={12}/>{tab.label}</button>))}
+          </div>
+          
+          {/* Top-ups sub-section */}
+          {l4Section==='topups'&&config.topUp&&(
+            <div className="space-y-3">
+              <div className="text-xs font-bold text-blue-700 uppercase tracking-wide flex items-center gap-2"><Shield size={14}/>Base Top-ups</div>
+              <div className="border border-onyx-300 rounded-xl p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-blue-200 flex items-center justify-center"><Shield size={18} className="text-blue-700"/></div><div><div className="font-semibold text-sm">Top-up Cover</div><div className="text-xs text-onyx-500">Extra ₹5L after base exhausted</div></div></div><div className="text-right"><div className="text-sm font-bold">₹{PremiumCalc.TOPUP_COST.toLocaleString()}/yr</div>{config.construct==='FLEX'&&<div className="text-[10px] text-purple-600">from wallet</div>}</div></div><div className="mt-3 flex items-center justify-between"><span className="text-xs text-onyx-600">{topUpEnabled?'Added':'Add to coverage'}</span><Toggle on={topUpEnabled} onToggle={()=>setTopUpEnabled(!topUpEnabled)}/></div></div>
+              {topUpEnabled&&<div className="bg-blue-100 rounded-lg p-3 text-xs text-blue-800"><div className="font-semibold mb-1">Per-member coverage:</div>{members.map((m,i)=><div key={i} className="flex justify-between py-0.5"><span>{m.name} ({m.relation})</span><span className="font-bold">Covered</span></div>)}</div>}
+            </div>
+          )}
+          
+          {/* Secondary sub-section */}
+          {l4Section==='secondary'&&config.secondary&&(
+            <div className="space-y-3">
+              <div className="text-xs font-bold text-green-700 uppercase tracking-wide flex items-center gap-2"><Users size={14}/>Secondary Plans & Top-ups</div>
+              <div className="border border-onyx-300 rounded-xl p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center"><Users size={18} className="text-green-700"/></div><div><div className="font-semibold text-sm">Parent Cover</div><div className="text-xs text-onyx-500">₹3L for parents</div></div></div><div className="text-sm font-bold">₹{PremiumCalc.SECONDARY_COST.toLocaleString()}/yr</div></div><div className="mt-3 flex items-center justify-between"><span className="text-xs text-onyx-600">{secondaryEnabled?'Added':'Add to coverage'}</span><Toggle on={secondaryEnabled} onToggle={()=>setSecondaryEnabled(!secondaryEnabled)}/></div></div>
+              {secondaryEnabled&&config.secTopUp&&<div className="border border-onyx-300 rounded-xl p-3"><div className="flex items-center justify-between"><div><div className="font-medium text-sm">Secondary Top-up</div><div className="text-xs text-onyx-500">Extra ₹3L for parents</div></div><Toggle on={false} onToggle={()=>{}}/></div></div>}
+              {secondaryEnabled&&<div className="bg-green-100 rounded-lg p-3 text-xs text-green-800"><div className="font-semibold mb-1">Covered parents:</div>{members.filter(m=>m.relation==='Parent').map((m,i)=><div key={i}>• {m.name} ({m.age} yrs)</div>)}{members.filter(m=>m.relation==='Parent').length===0&&<div className="text-onyx-500 italic">No parents added in family step</div>}</div>}
+            </div>
+          )}
+          
+          {/* Add-ons sub-section */}
+          {l4Section==='addons'&&config.addOns&&(
+            <div className="space-y-3">
+              <div className="text-xs font-bold text-orange-700 uppercase tracking-wide flex items-center gap-2"><Heart size={14}/>Add-ons</div>
+              {[{key:'opd',name:'OPD Cover',desc:'₹15,000/year',cost:PremiumCalc.ADDON_COSTS.opd,popular:true},{key:'dental',name:'Dental & Vision',desc:'₹10,000/year',cost:PremiumCalc.ADDON_COSTS.dental},{key:'wellness',name:'Wellness Program',desc:'Health checkups',cost:PremiumCalc.ADDON_COSTS.wellness}].map(a=>(
+                <div key={a.key} className={`border rounded-xl p-3 transition-all ${addOns[a.key]?'border-purple-400 bg-purple-50':'border-onyx-200'}`}>
+                  <div className="flex items-center justify-between"><div><div className="flex items-center gap-2"><span className="font-medium text-sm">{a.name}</span>{a.popular&&<span className="px-1.5 py-0.5 bg-orange-200 text-orange-700 text-[9px] font-bold rounded">POPULAR</span>}</div><div className="text-xs text-onyx-500 mt-0.5">{a.desc} | ₹{a.cost.toLocaleString()}/yr</div></div>
+                  <Toggle on={addOns[a.key]} onToggle={()=>setAddOns({...addOns,[a.key]:!addOns[a.key]})}/></div>
+                  {addOns[a.key]&&<div className="mt-2 bg-onyx-100 rounded-lg p-2 text-[10px] text-onyx-600"><span className="font-semibold">Covers:</span> {members.map(m=>m.name).join(', ')}</div>}
+                </div>
+              ))}
+              {config.construct==='FLEX'&&<div className="bg-purple-100 rounded-lg p-2 text-xs text-purple-700 flex items-center gap-2"><Wallet size={12}/>Add-on costs deducted from wallet balance</div>}
+            </div>
+          )}
+          
+          <div className="bg-onyx-100 rounded-xl p-3"><div className="flex justify-between text-sm"><span className="text-onyx-500">Enhancement total</span><span className="font-semibold">₹{(premium.topUpCost+premium.secondaryCost+premium.addOnCost).toLocaleString()}/yr</span></div></div>
+        </div>
+      );
+      
+      case 'L5': return (
+        <div className="px-5 py-4 space-y-4 pb-2">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
+          <div className="border border-onyx-300 rounded-xl overflow-hidden"><div className="bg-onyx-800 text-white p-4"><div className="text-xs opacity-70">Total Annual Premium</div><div className="text-3xl font-bold mt-1">₹{premium.total.toLocaleString()}</div></div>
+            <div className="p-4 space-y-3"><div className="flex justify-between text-sm"><span className="text-onyx-500">{config.construct==='FLEX'?'Wallet covers':'[Company] pays'}</span><span className="font-bold text-green-700">₹{premium.employerPays.toLocaleString()}</span></div>
+            {premium.employeePays>0&&<div className="flex justify-between text-sm"><span className="text-onyx-500">You pay</span><span className="font-bold text-orange-700">₹{premium.employeePays.toLocaleString()}</span></div>}
+            {featureCost>0&&<div className="flex justify-between text-sm border-t border-onyx-200 pt-2"><span className="text-onyx-500">Coverage features</span><span className="font-bold text-orange-700">₹{featureCost.toLocaleString()}</span></div>}
+            </div>
+          </div>
+          {config.construct==='FLEX'&&premium.walletOverflow>0&&<div className="bg-orange-100 border border-orange-200 rounded-xl p-4"><div className="flex items-center gap-2 mb-1"><AlertTriangle size={16} className="text-orange-700"/><span className="font-semibold text-sm text-orange-800">Wallet Overflow</span></div><div className="text-sm text-orange-700">Exceeds wallet by <span className="font-bold">₹{premium.walletOverflow.toLocaleString()}</span></div><div className="text-xs text-orange-600 mt-1">₹{premium.monthlyEmployee}/month salary deduction</div></div>}
+        </div>
+      );
+      
+      case 'L6': return (
+        <div className="px-5 py-4 space-y-4 pb-2">
+          <button onClick={goBack} className="flex items-center gap-1 text-sm text-purple-600"><ChevronLeft size={16}/>Back</button>
+          <div><h2 className="text-lg font-bold text-onyx-800">{content.headline}</h2><p className="text-sm text-onyx-500 mt-0.5">{content.subtext}</p></div>
+          <div className="space-y-3">
+            <div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><Shield size={16} className="text-purple-600"/><span className="font-semibold text-sm">Coverage</span></div><button onClick={()=>goToLayer(visibleLayers.findIndex(([l])=>l==='L2'))} className="text-xs text-purple-600 font-medium">Edit</button></div><div className="text-sm text-onyx-600">{config.construct==='MODULAR'?['Silver','Gold','Platinum'][selectedTier]+' Tier':'₹'+selectedSI+' SI'} | {familyTypes[selectedFamilyType]}</div>{Object.entries(coverageFeatures).some(([_,v])=>v)&&<div className="text-xs text-orange-700 mt-1">Features: {Object.entries(coverageFeatures).filter(([_,v])=>v).map(([k])=>COVERAGE_FEATURES.find(f=>f.id===k)?.name).join(', ')}</div>}</div>
+            <div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><Users size={16} className="text-purple-600"/><span className="font-semibold text-sm">Family ({members.length})</span></div><button onClick={()=>goToLayer(visibleLayers.findIndex(([l])=>l==='L3'))} className="text-xs text-purple-600 font-medium">Edit</button></div><div className="text-sm text-onyx-600">{members.map(m=>m.relation).join(', ')}</div></div>
+            {(topUpEnabled||secondaryEnabled||Object.values(addOns).some(Boolean))&&<div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center gap-2 mb-2"><Heart size={16} className="text-purple-600"/><span className="font-semibold text-sm">Enhancements</span></div><div className="text-sm text-onyx-600 space-y-1">{topUpEnabled&&<div>Top-up: ₹{PremiumCalc.TOPUP_COST.toLocaleString()}/yr</div>}{secondaryEnabled&&<div>Secondary: ₹{PremiumCalc.SECONDARY_COST.toLocaleString()}/yr</div>}{Object.entries(addOns).filter(([_,v])=>v).map(([k])=><div key={k}>{k.charAt(0).toUpperCase()+k.slice(1)}</div>)}</div></div>}
+            {premium.employeePays>0&&<div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center gap-2 mb-2"><CreditCard size={16} className="text-purple-600"/><span className="font-semibold text-sm">Your Investment</span></div><div className="text-sm text-onyx-600">₹{premium.monthlyEmployee}/month from salary</div></div>}
+          </div>
+          <div className="space-y-3">
+            <label onClick={()=>{setConsentTerms(!consentTerms);setErrors({});}} className="flex items-start gap-3 cursor-pointer"><div className={`w-5 h-5 border-2 rounded mt-0.5 flex-shrink-0 flex items-center justify-center transition-all ${consentTerms?'border-purple-600 bg-purple-600':'border-onyx-300'}`}>{consentTerms&&<CheckCircle2 size={14} className="text-white"/>}</div><span className="text-xs text-onyx-600">I agree to the terms and conditions</span></label>
+            {FlowEngine.hasEmployeePayment(config)&&premium.employeePays>0&&<label onClick={()=>{setConsentSalary(!consentSalary);setErrors({});}} className="flex items-start gap-3 cursor-pointer"><div className={`w-5 h-5 border-2 rounded mt-0.5 flex-shrink-0 flex items-center justify-center transition-all ${consentSalary?'border-purple-600 bg-purple-600':errors.salary?'border-cerise-500':'border-onyx-300'}`}>{consentSalary&&<CheckCircle2 size={14} className="text-white"/>}</div><span className="text-xs text-onyx-600">I consent to ₹{premium.monthlyEmployee}/month salary deduction</span></label>}
+            {config.construct==='FLEX'&&premium.walletOverflow>0&&<label onClick={()=>{setConsentWallet(!consentWallet);setErrors({});}} className="flex items-start gap-3 cursor-pointer"><div className={`w-5 h-5 border-2 rounded mt-0.5 flex-shrink-0 flex items-center justify-center transition-all ${consentWallet?'border-purple-600 bg-purple-600':errors.wallet?'border-cerise-500':'border-onyx-300'}`}>{consentWallet&&<CheckCircle2 size={14} className="text-white"/>}</div><span className="text-xs text-onyx-600">I acknowledge wallet overflow of ₹{premium.walletOverflow.toLocaleString()}</span></label>}
+          </div>
+          {Object.keys(errors).length>0&&<div className="text-xs text-cerise-700 bg-cerise-200 rounded-lg px-3 py-2 flex items-center gap-2"><AlertCircle size={14}/>{Object.values(errors)[0]}</div>}
+        </div>
+      );
+      
+      default: return <div className="p-5 text-onyx-500 text-center">Layer not available</div>;
+    }
+  };
+  
+  return (
+    <div className="flex gap-8 items-start">
+      <div className="flex-shrink-0">
+        <div className="flex items-center justify-between mb-4 px-2" style={{width:375}}>
+          <div className="text-xs text-onyx-500">{activeLayer} - {V2_LAYER_META[activeLayer]?.shortName} {submitted&&'(Submitted)'}</div>
+          <select value={contentTone} onChange={e=>setContentTone(e.target.value)} className={`px-2 py-1.5 rounded-lg text-xs font-medium border-0 cursor-pointer ${contentTone==='info'?'bg-green-200 text-green-700':contentTone==='awareness'?'bg-orange-200 text-orange-700':'bg-purple-200 text-purple-700'}`}><option value="info">Info</option><option value="awareness">Awareness</option><option value="persuasive">Persuasive</option></select>
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={goBack} disabled={idx===0||submitted} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${idx===0||submitted?'bg-onyx-200 text-onyx-400':'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}><ChevronLeft size={20}/></button>
+          <div className="relative phone-shadow rounded-[44px]" style={{width:375,height:780}}>
+            <div className="absolute inset-0 bg-onyx-800 rounded-[44px]">
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[120px] h-[32px] bg-onyx-800 rounded-full z-20"/>
+              <div className="absolute top-[8px] bottom-[8px] left-[8px] right-[8px] bg-white rounded-[38px] overflow-hidden flex flex-col">
+                <div className="flex justify-between items-center px-6 pt-14 pb-2" style={{fontSize:12}}><span className="font-semibold text-onyx-800">9:41</span><div className="flex items-center gap-1.5"><div className="flex gap-[2px]">{[4,6,8,10].map((h,i)=><div key={i} className="w-[3px] bg-onyx-800 rounded-full" style={{height:h}}/>)}</div><div className="relative w-[22px] h-[10px]"><div className="absolute inset-0 border border-onyx-800 rounded-[2px]"/><div className="absolute top-[1px] left-[1px] bottom-[1px] bg-green-600 rounded-[1px]" style={{width:'80%'}}/><div className="absolute top-[3px] -right-[2px] w-[1.5px] h-[4px] bg-onyx-800 rounded-r-full"/></div></div></div>
+                {!submitted&&<div className="px-4 py-2 flex items-center gap-1.5">{visibleLayers.map(([l],i)=>(<div key={l} className="flex-1 flex flex-col items-center cursor-pointer" onClick={()=>goToLayer(i)}><div className={`h-1.5 w-full rounded-full transition-all ${i<idx?'bg-purple-600':i===idx?'bg-purple-400':'bg-onyx-300'}`}/><span className={`text-[8px] mt-1 ${i===idx?'text-purple-700 font-bold':i<idx?'text-purple-400':'text-onyx-400'}`}>{layerNames[i]}</span></div>))}</div>}
+                <div className="flex-1 overflow-y-auto mobile-scroll">{renderScreen()}</div>
+                {!submitted&&<div className="px-5 py-3 bg-white border-t border-onyx-200"><button onClick={goNext} className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all ${activeLayer==='L6'?'bg-green-600 hover:bg-green-700 text-white':'bg-purple-600 hover:bg-purple-700 text-white'} shadow-lg`}>{ctaText}</button></div>}
+                <div className="flex justify-center py-2"><div className="w-[134px] h-[5px] bg-onyx-300 rounded-full"/></div>
+              </div>
+            </div>
+          </div>
+          <button onClick={goNext} disabled={(idx===visibleLayers.length-1&&activeLayer!=='L6')||submitted} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${(idx===visibleLayers.length-1&&activeLayer!=='L6')||submitted?'bg-onyx-200 text-onyx-400':'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}><ChevronRight size={20}/></button>
+        </div>
+        <div className="flex justify-center gap-2 mt-4">{visibleLayers.map(([l],i)=>(<button key={l} onClick={()=>goToLayer(i)} className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${submitted?'bg-green-200 text-green-700':i===idx?'bg-purple-600 text-white scale-110':i<idx?'bg-purple-200 text-purple-700':'bg-onyx-200 text-onyx-600 cursor-not-allowed'}`}>{l.replace('L','')}</button>))}</div>
+      </div>
+      
+      <div className="flex-1 min-w-0 space-y-4">
+        <div className="acko-card p-5 bg-white">
+          <div className="flex items-center gap-3 mb-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${submitted?'bg-green-200 text-green-700':decisions[activeLayer]==='D'?'bg-orange-200 text-orange-700':'bg-blue-200 text-blue-700'}`}><span className="font-bold text-sm">{submitted?'✓':activeLayer}</span></div><div><h3 className="font-bold text-onyx-800">{submitted?'Enrollment Complete':V2_LAYER_META[activeLayer]?.name}</h3><p className="text-xs text-onyx-500">{submitted?`${comboId} - ${config.construct}`:V2_LAYER_META[activeLayer]?.purpose}</p></div></div>
+          {!submitted&&<div className="bg-purple-100 rounded-xl p-3"><div className="text-xs text-purple-600 font-semibold mb-1">CORE QUESTION</div><div className="text-sm text-purple-800 font-medium italic">"{V2_LAYER_META[activeLayer]?.question}"</div></div>}
+          <div className="mt-3 bg-onyx-100 rounded-xl p-3"><div className="text-xs font-semibold text-onyx-600 mb-2">LIVE PREMIUM</div><div className="grid grid-cols-2 gap-2 text-xs"><div>Total: <span className="font-bold">₹{premium.total.toLocaleString()}/yr</span></div><div>You pay: <span className="font-bold text-orange-700">₹{premium.monthlyEmployee}/mo</span></div>{featureCost>0&&<div className="col-span-2">Features: <span className="font-bold text-orange-700">₹{featureCost.toLocaleString()}/yr</span></div>}{config.construct==='FLEX'&&<><div>Wallet: <span className="font-bold text-green-700">₹{premium.walletUsed.toLocaleString()}</span></div><div>Overflow: <span className={`font-bold ${premium.walletOverflow>0?'text-cerise-700':'text-green-700'}`}>₹{premium.walletOverflow.toLocaleString()}</span></div></>}</div></div>
+        </div>
+        <div className="acko-card p-5 bg-white"><h4 className="font-semibold text-sm text-onyx-800 mb-3 flex items-center gap-2"><AlertTriangle size={16} className="text-orange-500"/>Edge Cases</h4><div className="space-y-2">{(V2_LAYER_EDGE_CASES[activeLayer]||[]).map((ec,i)=>(<div key={i} className="flex items-start gap-2 text-sm text-onyx-700 p-2 bg-orange-100 rounded-lg"><AlertTriangle size={14} className="text-orange-500 mt-0.5 flex-shrink-0"/><span>{ec}</span></div>))}</div></div>
+        <div className="acko-card p-5 bg-white"><h4 className="font-semibold text-sm text-onyx-800 mb-3 flex items-center gap-2"><AlertCircle size={16} className="text-cerise-500"/>Error States</h4><div className="space-y-2">{(V2_LAYER_ERRORS[activeLayer]||[]).map(err=>(<div key={err.id} className="p-2 bg-onyx-100 rounded-lg"><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${err.severity==='critical'?'bg-cerise-700':err.severity==='validation'?'bg-orange-700':err.severity==='warning'?'bg-orange-500':'bg-blue-700'}`}>{err.severity}</span><span className="text-xs font-mono text-onyx-400">{err.id}</span></div><div className="text-sm font-medium text-onyx-800 mt-1">{err.error}</div><div className="text-xs text-onyx-500">{err.message}</div></div>))}</div></div>
+      </div>
+    </div>
+  );
+};
+
+const V2FlowDiagram = ({layers,config}) => {
+  const vis=Object.entries(layers).filter(([_,v])=>v.show);
+  const color=(t)=>t==='view'?'bg-blue-200 border-blue-200 text-blue-700':t==='decision'?'bg-orange-200 border-orange-200 text-orange-700':t==='conditional'?'bg-purple-200 border-purple-200 text-purple-700':'bg-onyx-200 border-onyx-200 text-onyx-500';
+  const icon=(l)=>({L0:<Play size={16}/>,L1:<Shield size={16}/>,L2:<Settings size={16}/>,L3:<Users size={16}/>,L4:<Heart size={16}/>,L5:<CreditCard size={16}/>,L6:<CheckCircle2 size={16}/>}[l]||<Circle size={16}/>);
+  return(
+    <div className="acko-card p-6 bg-white">
+      <h3 className="text-onyx-800 font-semibold mb-2 flex items-center gap-2"><GitBranch size={20} className="text-orange-500"/>Flow Diagram <span className="text-xs bg-orange-200 text-orange-700 px-2 py-0.5 rounded-full font-bold">UPDATED</span></h3>
+      <div className="text-xs text-purple-600 bg-purple-100 rounded-lg px-3 py-2 mb-4 flex items-center gap-2"><Info size={12}/>L2 = Plan Configuration (was L3), L3 = Family Enrollment (was L2). L4 has sub-sections.</div>
+      <div className="flex flex-wrap items-center gap-3">{vis.map(([l,d],i)=>(<React.Fragment key={l}><div className={`relative px-4 py-3 rounded-xl border-2 ${color(d.type)} transition-all hover:scale-105 cursor-pointer group min-w-[120px]`}><div className="flex items-center gap-2 mb-1">{icon(l)}<span className="font-bold text-sm">{l}</span></div><div className="text-xs font-medium">{V2_LAYER_META[l]?.shortName}</div><div className="text-[10px] opacity-75 mt-1 uppercase tracking-wide">{d.type}</div><div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-onyx-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">{d.reason}<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-onyx-800"/></div></div>{i<vis.length-1&&<ArrowRight className="text-onyx-400" size={20}/>}</React.Fragment>))}</div>
+      <div className="flex gap-4 mt-6 pt-4 border-t border-onyx-200">{[['bg-blue-200','View Only'],['bg-orange-200','Decision'],['bg-purple-200','Conditional']].map(([bg,l])=>(<div key={l} className="flex items-center gap-2 text-xs text-onyx-500"><div className={`w-3 h-3 rounded ${bg}`}/><span>{l}</span></div>))}</div>
+    </div>
+  );
+};
+
+const V2DecisionMatrix = ({config,layers}) => {
+  const d=V2FlowEngine.getLayerDecision(config);
+  const cs=(v)=>({V:'bg-blue-200 text-blue-700',D:'bg-orange-200 text-orange-700',S:'bg-onyx-200 text-onyx-500',C:'bg-purple-200 text-purple-700'}[v]||'bg-onyx-200 text-onyx-500');
+  return(
+    <div className="acko-card p-6 bg-white">
+      <h3 className="font-semibold mb-4 flex items-center gap-2 text-onyx-800"><Eye size={20} className="text-orange-500"/>Decision Matrix <span className="text-xs bg-orange-200 text-orange-700 px-2 py-0.5 rounded-full font-bold">UPDATED</span></h3>
+      <div className="flex gap-2 mb-4">{['L0','L1','L2','L3','L4','L5','L6'].map(l=>(<div key={l} className="flex flex-col items-center"><div className="text-xs font-bold text-onyx-500 mb-1">{l}</div><div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${cs(d[l])} ${!layers[l]?.show&&'opacity-40'}`}>{d[l]}</div><div className="text-[8px] text-onyx-400 mt-1">{V2_LAYER_META[l]?.shortName}</div></div>))}</div>
+    </div>
+  );
+};
+
+const V2ContentRequirements = ({config,layers}) => (
+  <div className="acko-card p-6 bg-white">
+    <h3 className="font-semibold mb-4 flex items-center gap-2 text-onyx-800"><FileText size={20} className="text-orange-500"/>Content Requirements <span className="text-xs bg-orange-200 text-orange-700 px-2 py-0.5 rounded-full font-bold">UPDATED</span></h3>
+    <div className="space-y-4">{Object.entries(layers).filter(([_,v])=>v.show).map(([l])=>{const c=V2FlowEngine.getContentRequirements(config,l);return(<div key={l} className="p-4 bg-onyx-100 rounded-xl"><div className="font-bold text-onyx-700 mb-2">{l} — {V2_LAYER_META[l]?.shortName}</div><div className="grid grid-cols-2 gap-3 text-sm"><div><span className="text-onyx-500">Headline:</span><div className="font-medium text-onyx-800">{c.headline}</div></div><div><span className="text-onyx-500">Subtext:</span><div className="text-onyx-700">{c.subtext}</div></div><div><span className="text-onyx-500">Primary CTA:</span><div className="inline-block px-3 py-1 bg-purple-600 text-white rounded text-xs">{c.cta_primary}</div></div>{c.cta_secondary&&<div><span className="text-onyx-500">Secondary:</span><div className="inline-block px-3 py-1 border border-onyx-300 text-onyx-700 rounded text-xs">{c.cta_secondary}</div></div>}{c.anxiety_reducers?.length>0&&<div className="col-span-2"><span className="text-onyx-500">Anxiety reducers:</span><div className="flex flex-wrap gap-1 mt-1">{c.anxiety_reducers.map((t,i)=><span key={i} className="px-2 py-0.5 bg-green-200 text-green-700 rounded text-xs flex items-center gap-1"><Info size={10}/>{t}</span>)}</div></div>}</div></div>);})}</div>
+  </div>
+);
+
+const LogicUpdatesSimulator = ({onBack}) => {
+  const [selectedCombo, setSelectedCombo] = useState('V01');
+  const [inputMode, setInputMode] = useState('rfq');
+  const [analysisTab, setAnalysisTab] = useState('flow');
+  const [rfqMatches, setRfqMatches] = useState(null);
+  
+  const currentConfig = POLICY_COMBINATIONS[selectedCombo];
+  const layers = useMemo(()=>V2FlowEngine.getLayerVisibility(currentConfig),[currentConfig]);
+  const scenarios = useMemo(()=>V2FlowEngine.generateTestScenarios(currentConfig,selectedCombo),[currentConfig,selectedCombo]);
+  
+  const handleRFQSelect = useCallback((comboId)=>{setSelectedCombo(comboId);setInputMode('rfq');},[]);
+  const comboGroups = useMemo(()=>{const g={VANILLA:[],MODULAR:[],FLEX:[]};Object.entries(POLICY_COMBINATIONS).forEach(([id,config])=>g[config.construct].push({id,...config}));return g;},[]);
+  
+  return(
+    <div className="min-h-screen bg-onyx-200">
+      <header className="bg-gradient-to-r from-orange-500 to-amber-500 border-b border-orange-600 sticky top-0 z-50 shadow-md">
+        <div className="max-w-[1600px] mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div><h1 className="text-2xl font-bold text-white flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><Zap className="text-white" size={22}/></div>Logic Updates — Stage 6</h1><p className="text-orange-100 text-sm mt-1">Cascading RFQ • Reordered Layers • L4 Sub-sections • F14 Coverage Features</p></div>
+            <div className="flex items-center gap-4"><button onClick={onBack} className="px-4 py-2 bg-white text-orange-700 text-sm font-semibold rounded-lg shadow hover:shadow-lg transition-all flex items-center gap-2"><ArrowLeft size={16}/>Back to Main Simulator</button>
+            <div className="flex items-center gap-2"><span className="text-xs text-orange-100">Input:</span><div className="flex bg-white/20 rounded-lg p-1">{[{id:'rfq',label:'RFQ Match',icon:Search},{id:'preset',label:'Presets',icon:List}].map(m=>(<button key={m.id} onClick={()=>setInputMode(m.id)} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${inputMode===m.id?'bg-white text-orange-700 shadow-sm':'text-white/80 hover:text-white'}`}><m.icon size={14}/>{m.label}</button>))}</div></div></div>
+          </div>
+        </div>
+      </header>
+      
+      <main className="max-w-[1600px] mx-auto px-6 py-8">
+        {/* Change Summary Banner */}
+        <div className="mb-6 p-4 bg-orange-100 border-2 border-orange-300 rounded-2xl">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-orange-200 flex items-center justify-center flex-shrink-0"><Zap size={20} className="text-orange-700"/></div>
+            <div className="flex-1">
+              <div className="font-bold text-orange-800 mb-2">What changed in this version:</div>
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+                <div className="bg-white rounded-lg p-2"><div className="font-bold text-purple-700 mb-1">1. RFQ Matcher</div><div className="text-onyx-600">Cascading deductive logic. No grade-based filter.</div></div>
+                <div className="bg-white rounded-lg p-2"><div className="font-bold text-purple-700 mb-1">2. L2 = Configure</div><div className="text-onyx-600">Plan config (SI, family type, features) moved from old L3.</div></div>
+                <div className="bg-white rounded-lg p-2"><div className="font-bold text-purple-700 mb-1">3. L3 = Family</div><div className="text-onyx-600">Member data entry moved from old L2. Context from L2.</div></div>
+                <div className="bg-white rounded-lg p-2"><div className="font-bold text-purple-700 mb-1">4. L4 Sections</div><div className="text-onyx-600">Top-ups | Secondary | Add-ons with per-member details.</div></div>
+                <div className="bg-white rounded-lg p-2"><div className="font-bold text-purple-700 mb-1">5. F14 Features</div><div className="text-onyx-600">Maternity, OPD, Room Rent toggles in L2 (Flex Variable).</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mb-8">
+          {inputMode==='rfq'&&<V2RFQBuilder onSelectCombo={handleRFQSelect} onMatchResults={setRfqMatches}/>}
+          {inputMode==='preset'&&(
+            <div className="acko-card p-6 bg-white"><h3 className="font-semibold mb-4 text-onyx-800">Select Policy Combination</h3><div className="grid grid-cols-3 gap-6">{Object.entries(comboGroups).map(([construct,combos])=>(<div key={construct}><div className={`text-sm font-bold mb-2 px-3 py-1 rounded-lg inline-block ${construct==='VANILLA'?'bg-green-200 text-green-700':construct==='MODULAR'?'bg-orange-200 text-orange-700':'bg-purple-200 text-purple-700'}`}>{construct} ({combos.length})</div><div className="space-y-1 max-h-64 overflow-y-auto pr-2">{combos.map(c=><button key={c.id} onClick={()=>setSelectedCombo(c.id)} className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${selectedCombo===c.id?'bg-orange-100 text-orange-700 font-medium':'hover:bg-onyx-100 text-onyx-700'}`}><span className="font-mono font-bold">{c.id}</span><span className="text-onyx-500 ml-2">{c.name}</span></button>)}</div></div>))}</div></div>
+          )}
+        </div>
+        
+        <div className="mb-8 p-6 bg-white border border-orange-200 rounded-2xl shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2"/>
+          <div className="flex items-center justify-between relative z-10">
+            <div><div className="text-sm text-onyx-500 mb-1">Currently Analyzing</div><div className="text-2xl font-bold text-onyx-800 flex items-center gap-3">{selectedCombo}<span className={`px-3 py-1 rounded-lg text-sm font-bold ${currentConfig.construct==='VANILLA'?'bg-green-200 text-green-700':currentConfig.construct==='MODULAR'?'bg-orange-200 text-orange-700':'bg-purple-200 text-purple-700'}`}>{currentConfig.construct}</span><span className="text-lg font-normal text-onyx-500">{currentConfig.name||''}</span></div></div>
+            <div className="flex gap-8"><div className="text-center"><div className="text-3xl font-bold text-orange-600">{Object.values(layers).filter(l=>l.show).length}</div><div className="text-xs text-onyx-500 font-medium uppercase tracking-wide">Layers</div></div><div className="text-center"><div className="text-3xl font-bold text-orange-600">{scenarios.length}</div><div className="text-xs text-onyx-500 font-medium uppercase tracking-wide">Tests</div></div></div>
+          </div>
+        </div>
+        
+        <div className="mb-6"><div className="flex bg-onyx-100 rounded-xl p-1.5 border border-onyx-300">{[{id:'flow',label:'Flow Overview',icon:GitBranch},{id:'mobile',label:'Interactive Mobile',icon:Smartphone},{id:'components',label:'Components & Tests',icon:List},{id:'content',label:'Content & Export',icon:FileText}].map(tab=>(<button key={tab.id} onClick={()=>setAnalysisTab(tab.id)} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${analysisTab===tab.id?'bg-white text-orange-700 shadow-md':'text-onyx-600 hover:text-onyx-800'}`}><tab.icon size={16}/>{tab.label}</button>))}</div></div>
+        
+        <div className="tab-content">
+          {analysisTab==='flow'&&<div className="space-y-8"><V2FlowDiagram layers={layers} config={currentConfig}/><V2DecisionMatrix config={currentConfig} layers={layers}/></div>}
+          {analysisTab==='mobile'&&<div className="acko-card p-6 bg-white"><h3 className="font-semibold mb-6 flex items-center gap-2 text-onyx-800"><Smartphone size={20} className="text-orange-500"/>Interactive Mobile — {selectedCombo} ({currentConfig.construct}) <span className="text-xs bg-orange-200 text-orange-700 px-2 py-0.5 rounded-full font-bold">UPDATED LAYERS</span></h3><p className="text-sm text-onyx-500 mb-6">L2 = Plan Configuration, L3 = Family Enrollment. L4 has sub-section tabs. F14 coverage feature toggles in L2 for Flex Variable.</p><V2MobileSimulator config={currentConfig} layers={layers} comboId={selectedCombo}/></div>}
+          {analysisTab==='components'&&<div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><ComponentChecklist config={currentConfig} layers={layers}/><TestScenarios scenarios={scenarios}/></div>}
+          {analysisTab==='content'&&<div className="space-y-8"><V2ContentRequirements config={currentConfig} layers={layers}/><ExportPanel config={currentConfig} comboId={selectedCombo} layers={layers} scenarios={scenarios}/></div>}
+        </div>
+      </main>
+      
+      <footer className="bg-onyx-100 border-t border-onyx-300 py-6 mt-12"><div className="max-w-[1600px] mx-auto px-6 text-center text-onyx-500 text-sm">GMC Flow Engine Simulator — Logic Updates v5.0 | Stage 6 | Cascading RFQ + Reordered Layers + L4 Sections + F14 Features</div></footer>
+    </div>
+  );
+};
+
+// ============================================================================
 // MAIN APP
 // ============================================================================
 export default function GMCFlowEngineSimulator() {
+  const [logicMode, setLogicMode] = useState('current');
   const [selectedCombo, setSelectedCombo] = useState('V01');
   const [inputMode, setInputMode] = useState('rfq');
   const [analysisTab, setAnalysisTab] = useState('flow');
   const [customConfig, setCustomConfig] = useState(null);
   const [rfqMatches, setRfqMatches] = useState(null);
   const [pendingScenario, setPendingScenario] = useState(null);
+  
+  if (logicMode === 'updated') return (<><style>{ackoStyles}</style><LogicUpdatesSimulator onBack={() => setLogicMode('current')} /></>);
   
   const currentConfig = useMemo(() => (inputMode === 'preset' || inputMode === 'rfq') ? POLICY_COMBINATIONS[selectedCombo] : (customConfig || POLICY_COMBINATIONS.V01), [selectedCombo, inputMode, customConfig]);
   const layers = useMemo(() => FlowEngine.getLayerVisibility(currentConfig), [currentConfig]);
@@ -1260,7 +1938,7 @@ export default function GMCFlowEngineSimulator() {
           <div className="max-w-[1600px] mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div><h1 className="text-2xl font-bold text-onyx-800 flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center"><GitBranch className="text-white" size={22} /></div>GMC Flow Engine Simulator</h1><p className="text-onyx-500 text-sm mt-1">Interactive mobile prototype with real-time validations</p></div>
-              <div className="flex items-center gap-2"><span className="text-xs text-onyx-500">Input:</span><div className="flex bg-onyx-200 rounded-lg p-1">{[{id:'rfq',label:'RFQ Match',icon:Search},{id:'preset',label:'Presets',icon:List},{id:'form',label:'Form',icon:Settings},{id:'json',label:'JSON',icon:Upload}].map(m=>(<button key={m.id} onClick={()=>setInputMode(m.id)} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${inputMode===m.id?'bg-white text-purple-700 shadow-sm':'text-onyx-600 hover:text-onyx-800'}`}><m.icon size={14}/>{m.label}</button>))}</div></div>
+              <div className="flex items-center gap-4"><button onClick={()=>setLogicMode('updated')} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 animate-pulse hover:animate-none"><Zap size={16}/>Logic Updates</button><div className="flex items-center gap-2"><span className="text-xs text-onyx-500">Input:</span><div className="flex bg-onyx-200 rounded-lg p-1">{[{id:'rfq',label:'RFQ Match',icon:Search},{id:'preset',label:'Presets',icon:List},{id:'form',label:'Form',icon:Settings},{id:'json',label:'JSON',icon:Upload}].map(m=>(<button key={m.id} onClick={()=>setInputMode(m.id)} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${inputMode===m.id?'bg-white text-purple-700 shadow-sm':'text-onyx-600 hover:text-onyx-800'}`}><m.icon size={14}/>{m.label}</button>))}</div></div></div>
             </div>
           </div>
         </header>
@@ -1293,7 +1971,7 @@ export default function GMCFlowEngineSimulator() {
           </div>
         </main>
         
-        <footer className="bg-onyx-100 border-t border-onyx-300 py-6 mt-12"><div className="max-w-[1600px] mx-auto px-6 text-center text-onyx-500 text-sm">GMC Flow Engine Simulator v4.1 | 51 Combinations (20V + 11M + 20F) | Error Simulation on Mobile + Scenario Playback + Content Tone Pyramid</div></footer>
+        <footer className="bg-onyx-100 border-t border-onyx-300 py-6 mt-12"><div className="max-w-[1600px] mx-auto px-6 text-center text-onyx-500 text-sm">GMC Flow Engine Simulator v4.2 | 51 Combinations (20V + 11M + 20F) | Component-Level Error Simulation + Scenario States + Content Tone Pyramid</div></footer>
       </div>
     </>
   );
