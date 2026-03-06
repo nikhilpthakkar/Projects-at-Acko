@@ -1504,7 +1504,14 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
   const [coverageFeatures, setCoverageFeatures] = useState({maternity:false,roomRent:false,opd:false,daycare:false,intlCover:false});
   const [topUpEnabled, setTopUpEnabled] = useState(false);
   const [secondaryEnabled, setSecondaryEnabled] = useState(false);
-  const [addOns, setAddOns] = useState({opd:false,dental:false,wellness:false});
+  const [addOns, setAddOns] = useState({
+    opd:{enabled:false,members:[],allocatedCost:0},
+    dental:{enabled:false,members:[],allocatedCost:0},
+    eyecare:{enabled:false,members:[],allocatedCost:0},
+    wellness:{enabled:false,members:[],allocatedCost:0}
+  });
+  const [showParentSheet, setShowParentSheet] = useState(false);
+  const [inlineParents, setInlineParents] = useState([{name:'',age:'',gender:''},{name:'',age:'',gender:''}]);
   const [consentTerms, setConsentTerms] = useState(false);
   const [consentSalary, setConsentSalary] = useState(false);
   const [consentWallet, setConsentWallet] = useState(false);
@@ -1515,9 +1522,30 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
   
   const activeLayer = visibleLayers[idx]?.[0] || 'L0';
   const layerNames = visibleLayers.map(([l]) => V2_LAYER_META[l]?.shortName || l);
+  const ADDON_DEFS = useMemo(()=>[
+    {key:'opd',name:'OPD Cover',desc:'Outpatient consultation',poolBudget:5000,perMemberCost:2000,memberTypes:['any'],popular:true},
+    {key:'dental',name:'Dental & Vision',desc:'Dental + eye care',poolBudget:4000,perMemberCost:1500,memberTypes:['any']},
+    {key:'eyecare',name:'Eye Care',desc:'Vision coverage',poolBudget:4000,perMemberCost:2000,memberTypes:['E','E+S']},
+    {key:'wellness',name:'Wellness Program',desc:'Health checkups',poolBudget:3000,perMemberCost:1000,memberTypes:['any']}
+  ],[]);
+  
+  const totalAddonAllocated = useMemo(()=>{let t=0;Object.values(addOns).forEach(a=>{if(a.enabled)t+=a.allocatedCost;});return t;},[addOns]);
+  const totalAddonPool = useMemo(()=>{let t=0;Object.entries(addOns).forEach(([k,a])=>{if(a.enabled){const def=ADDON_DEFS.find(d=>d.key===k);if(def)t+=def.poolBudget;}});return t;},[addOns,ADDON_DEFS]);
+  const addonWalletReturn = totalAddonPool - totalAddonAllocated;
+  
   const featureCost = useMemo(()=>{let c=0;Object.entries(coverageFeatures).forEach(([k,on])=>{if(on){const f=COVERAGE_FEATURES.find(f=>f.id===k);if(f)c+=f.cost;}});return c;},[coverageFeatures]);
-  const state = {members,selectedTier,selectedSI,selectedFamilyDef:selectedFamilyType,topUpEnabled,secondaryEnabled,addOns};
-  const premium = useMemo(() => {const p=PremiumCalc.calculate(state,config);return{...p,total:p.total+featureCost,employeePays:config.construct==='FLEX'?Math.max(0,p.total+featureCost-PremiumCalc.WALLET_TOTAL):p.employeePays+featureCost,walletUsed:config.construct==='FLEX'?Math.min(p.total+featureCost,PremiumCalc.WALLET_TOTAL):p.walletUsed,walletOverflow:config.construct==='FLEX'?Math.max(0,p.total+featureCost-PremiumCalc.WALLET_TOTAL):p.walletOverflow,walletRemaining:config.construct==='FLEX'?Math.max(0,PremiumCalc.WALLET_TOTAL-Math.min(p.total+featureCost,PremiumCalc.WALLET_TOTAL)):p.walletRemaining,monthlyEmployee:Math.round((config.construct==='FLEX'?Math.max(0,p.total+featureCost-PremiumCalc.WALLET_TOTAL):p.employeePays+featureCost)/12)};}, [members,selectedTier,selectedSI,topUpEnabled,secondaryEnabled,addOns,config,featureCost]);
+  const legacyAddOns = useMemo(()=>{const o={};Object.entries(addOns).forEach(([k,v])=>{o[k]=v.enabled;});return o;},[addOns]);
+  const state = {members,selectedTier,selectedSI,selectedFamilyDef:selectedFamilyType,topUpEnabled,secondaryEnabled,addOns:legacyAddOns};
+  const premium = useMemo(() => {
+    const p=PremiumCalc.calculate(state,config);
+    const addonCostActual=totalAddonAllocated;
+    const adjustedTotal=p.baseCost+p.topUpCost+p.secondaryCost+addonCostActual+featureCost;
+    const walletUsed=config.construct==='FLEX'?Math.min(adjustedTotal,PremiumCalc.WALLET_TOTAL):p.walletUsed;
+    const walletOverflow=config.construct==='FLEX'?Math.max(0,adjustedTotal-PremiumCalc.WALLET_TOTAL):p.walletOverflow;
+    const employerPays=config.construct==='FLEX'?walletUsed:(config.basePay==='employer'&&!FlowEngine.hasEmployeePaidEnhancements(config)?adjustedTotal:config.basePay==='partial'?Math.round(p.baseCost*0.7):p.baseCost);
+    const employeePays=adjustedTotal-employerPays;
+    return{...p,addOnCost:addonCostActual,addonWalletReturn,total:adjustedTotal,employerPays,employeePays:Math.max(0,employeePays),walletUsed,walletOverflow,walletRemaining:config.construct==='FLEX'?Math.max(0,PremiumCalc.WALLET_TOTAL-walletUsed):0,monthlyEmployee:Math.round(Math.max(0,employeePays)/12)};
+  }, [members,selectedTier,selectedSI,topUpEnabled,secondaryEnabled,addOns,config,featureCost,totalAddonAllocated,addonWalletReturn]);
   const content = useMemo(() => V2FlowEngine.getContentRequirements(config,activeLayer,contentTone), [config,activeLayer,contentTone]);
   const decisions = V2FlowEngine.getLayerDecision(config);
   
@@ -1526,7 +1554,8 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
   if(configKey!==prevKey){
     setPrevKey(configKey);setIdx(0);setSubmitted(false);setConsentTerms(false);setConsentSalary(false);setConsentWallet(false);
     setContentTone({VANILLA:'info',MODULAR:'awareness',FLEX:'persuasive'}[config.construct]||'info');
-    setTopUpEnabled(false);setSecondaryEnabled(false);setAddOns({opd:false,dental:false,wellness:false});
+    setTopUpEnabled(false);setSecondaryEnabled(false);setAddOns({opd:{enabled:false,members:[],allocatedCost:0},dental:{enabled:false,members:[],allocatedCost:0},eyecare:{enabled:false,members:[],allocatedCost:0},wellness:{enabled:false,members:[],allocatedCost:0}});
+    setShowParentSheet(false);setInlineParents([{name:'',age:'',gender:''},{name:'',age:'',gender:''}]);
     setSelectedTier(0);setSelectedSI('5L');setSelectedFamilyType(2);setPrevFamilyType(2);setErrors({});setL4Section('topups');
     setCoverageFeatures({maternity:false,roomRent:false,opd:false,daycare:false,intlCover:false});
     setMembers([{id:1,name:'Employee',relation:'Self',age:32,gender:'Male'},{id:2,name:'Spouse',relation:'Spouse',age:30,gender:'Female'}]);
@@ -1759,28 +1788,111 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
           {l4Section==='secondary'&&config.secondary&&(
             <div className="space-y-3">
               <div className="text-xs font-bold text-green-700 uppercase tracking-wide flex items-center gap-2"><Users size={14}/>Secondary Plans & Top-ups</div>
-              <div className="border border-onyx-300 rounded-xl p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center"><Users size={18} className="text-green-700"/></div><div><div className="font-semibold text-sm">Parent Cover</div><div className="text-xs text-onyx-500">₹3L for parents</div></div></div><div className="text-sm font-bold">₹{PremiumCalc.SECONDARY_COST.toLocaleString()}/yr</div></div><div className="mt-3 flex items-center justify-between"><span className="text-xs text-onyx-600">{secondaryEnabled?'Added':'Add to coverage'}</span><Toggle on={secondaryEnabled} onToggle={()=>setSecondaryEnabled(!secondaryEnabled)}/></div></div>
+              <div className="border border-onyx-300 rounded-xl p-4"><div className="flex items-start justify-between"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center"><Users size={18} className="text-green-700"/></div><div><div className="font-semibold text-sm">Parent Cover</div><div className="text-xs text-onyx-500">₹3L for parents</div></div></div><div className="text-sm font-bold">₹{PremiumCalc.SECONDARY_COST.toLocaleString()}/yr</div></div><div className="mt-3 flex items-center justify-between"><span className="text-xs text-onyx-600">{secondaryEnabled?'Added':'Add to coverage'}</span><Toggle on={secondaryEnabled} onToggle={()=>{const next=!secondaryEnabled;setSecondaryEnabled(next);if(next&&members.filter(m=>m.relation==='Parent').length===0)setShowParentSheet(true);}}/></div></div>
               {secondaryEnabled&&config.secTopUp&&<div className="border border-onyx-300 rounded-xl p-3"><div className="flex items-center justify-between"><div><div className="font-medium text-sm">Secondary Top-up</div><div className="text-xs text-onyx-500">Extra ₹3L for parents</div></div><Toggle on={false} onToggle={()=>{}}/></div></div>}
-              {secondaryEnabled&&<div className="bg-green-100 rounded-lg p-3 text-xs text-green-800"><div className="font-semibold mb-1">Covered parents:</div>{members.filter(m=>m.relation==='Parent').map((m,i)=><div key={i}>• {m.name} ({m.age} yrs)</div>)}{members.filter(m=>m.relation==='Parent').length===0&&<div className="text-onyx-500 italic">No parents added in family step</div>}</div>}
+              {secondaryEnabled&&members.filter(m=>m.relation==='Parent').length>0&&(
+                <div className="bg-green-100 rounded-lg p-3 text-xs text-green-800"><div className="font-semibold mb-1">Covered parents:</div>{members.filter(m=>m.relation==='Parent').map((m,i)=><div key={i} className="flex justify-between py-0.5"><span>• {m.name||'(Unnamed)'} ({m.age||'?'} yrs)</span><span className="font-bold text-green-700">Covered</span></div>)}</div>
+              )}
+              {/* Inline parent addition bottom sheet */}
+              {secondaryEnabled&&showParentSheet&&members.filter(m=>m.relation==='Parent').length===0&&(
+                <div className="border-2 border-green-400 rounded-xl p-4 bg-green-50 space-y-3">
+                  <div className="flex items-center gap-2"><AlertTriangle size={16} className="text-orange-600"/><div className="text-sm font-semibold text-green-800">No parents in your family — add them here</div></div>
+                  <div className="text-xs text-green-700 bg-green-100 rounded-lg px-3 py-2 flex items-center gap-2"><Info size={12}/>Parents added here will also appear in your Family Members (L3)</div>
+                  {members.length>=6?(
+                    <div className="text-xs text-cerise-700 bg-cerise-100 rounded-lg px-3 py-2 flex items-center gap-2"><AlertCircle size={14}/>Maximum 6 family members reached. Remove a member in Family step to add parents.</div>
+                  ):(
+                    <div className="space-y-3">
+                      {inlineParents.map((p,pi)=>(
+                        <div key={pi} className="border border-green-300 rounded-lg p-3 bg-white space-y-2">
+                          <div className="text-xs font-semibold text-green-700">{pi===0?'Father':'Mother'}</div>
+                          <input placeholder="Full Name" value={p.name} onChange={e=>{const n=[...inlineParents];n[pi]={...n[pi],name:e.target.value};setInlineParents(n);}} className="acko-input text-sm" style={{height:36}}/>
+                          <div className="flex gap-2">
+                            <input placeholder="Age" type="number" value={p.age} onChange={e=>{const n=[...inlineParents];n[pi]={...n[pi],age:e.target.value};setInlineParents(n);}} className="acko-input text-sm flex-1" style={{height:36}}/>
+                            <select value={p.gender} onChange={e=>{const n=[...inlineParents];n[pi]={...n[pi],gender:e.target.value};setInlineParents(n);}} className="acko-input text-sm flex-1" style={{height:36}}><option value="">Gender</option><option>Male</option><option>Female</option><option>Other</option></select>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex gap-2">
+                        <button onClick={()=>{
+                          const toAdd=inlineParents.filter(p=>p.name&&p.age);
+                          if(toAdd.length===0){setErrors({parentSheet:'Fill at least one parent'});return;}
+                          const newMembers=[...members,...toAdd.map((p,i)=>({id:Date.now()+i,name:p.name,relation:'Parent',age:parseInt(p.age)||0,gender:p.gender||'Other'}))];
+                          setMembers(newMembers);setShowParentSheet(false);setInlineParents([{name:'',age:'',gender:''},{name:'',age:'',gender:''}]);setErrors({});
+                        }} className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm font-semibold">Add Parents</button>
+                        <button onClick={()=>{setShowParentSheet(false);setErrors({});}} className="flex-1 border border-onyx-300 rounded-lg py-2 text-sm text-onyx-600">Skip</button>
+                      </div>
+                      {errors.parentSheet&&<div className="text-xs text-cerise-700 flex items-center gap-1"><AlertCircle size={12}/>{errors.parentSheet}</div>}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           
-          {/* Add-ons sub-section */}
+          {/* Add-ons sub-section — per-member allocation */}
           {l4Section==='addons'&&config.addOns&&(
             <div className="space-y-3">
-              <div className="text-xs font-bold text-orange-700 uppercase tracking-wide flex items-center gap-2"><Heart size={14}/>Add-ons</div>
-              {[{key:'opd',name:'OPD Cover',desc:'₹15,000/year',cost:PremiumCalc.ADDON_COSTS.opd,popular:true},{key:'dental',name:'Dental & Vision',desc:'₹10,000/year',cost:PremiumCalc.ADDON_COSTS.dental},{key:'wellness',name:'Wellness Program',desc:'Health checkups',cost:PremiumCalc.ADDON_COSTS.wellness}].map(a=>(
-                <div key={a.key} className={`border rounded-xl p-3 transition-all ${addOns[a.key]?'border-purple-400 bg-purple-50':'border-onyx-200'}`}>
-                  <div className="flex items-center justify-between"><div><div className="flex items-center gap-2"><span className="font-medium text-sm">{a.name}</span>{a.popular&&<span className="px-1.5 py-0.5 bg-orange-200 text-orange-700 text-[9px] font-bold rounded">POPULAR</span>}</div><div className="text-xs text-onyx-500 mt-0.5">{a.desc} | ₹{a.cost.toLocaleString()}/yr</div></div>
-                  <Toggle on={addOns[a.key]} onToggle={()=>setAddOns({...addOns,[a.key]:!addOns[a.key]})}/></div>
-                  {addOns[a.key]&&<div className="mt-2 bg-onyx-100 rounded-lg p-2 text-[10px] text-onyx-600"><span className="font-semibold">Covers:</span> {members.map(m=>m.name).join(', ')}</div>}
+              <div className="text-xs font-bold text-orange-700 uppercase tracking-wide flex items-center gap-2"><Heart size={14}/>Add-ons — Per-Member Allocation</div>
+              {addonWalletReturn>0&&(config.construct==='FLEX'||config.construct==='MODULAR')&&(
+                <div className="bg-green-100 border border-green-300 rounded-xl p-3 flex items-center gap-3">
+                  <Wallet size={16} className="text-green-700"/>
+                  <div className="flex-1"><div className="text-xs font-bold text-green-800">₹{addonWalletReturn.toLocaleString()} returned to wallet</div><div className="text-[10px] text-green-600">Partial allocation saves unused add-on budget</div></div>
                 </div>
-              ))}
-              {config.construct==='FLEX'&&<div className="bg-purple-100 rounded-lg p-2 text-xs text-purple-700 flex items-center gap-2"><Wallet size={12}/>Add-on costs deducted from wallet balance</div>}
+              )}
+              {ADDON_DEFS.map(def=>{
+                const ao=addOns[def.key]||{enabled:false,members:[],allocatedCost:0};
+                const toggleAddon=()=>{
+                  if(!ao.enabled){
+                    const defaultMembers=def.memberTypes.includes('E')?[members[0]?.id]:(def.memberTypes.includes('E+S')?members.filter(m=>m.relation==='Self'||m.relation==='Spouse').map(m=>m.id):members.map(m=>m.id));
+                    const cost=defaultMembers.length*def.perMemberCost;
+                    setAddOns(prev=>({...prev,[def.key]:{enabled:true,members:defaultMembers,allocatedCost:Math.min(cost,def.poolBudget)}}));
+                  } else {
+                    setAddOns(prev=>({...prev,[def.key]:{enabled:false,members:[],allocatedCost:0}}));
+                  }
+                };
+                const toggleMember=(mid)=>{
+                  const cur=ao.members||[];
+                  const next=cur.includes(mid)?cur.filter(id=>id!==mid):[...cur,mid];
+                  const cost=next.length*def.perMemberCost;
+                  setAddOns(prev=>({...prev,[def.key]:{...prev[def.key],members:next,allocatedCost:Math.min(cost,def.poolBudget)}}));
+                };
+                return(
+                <div key={def.key} className={`border-2 rounded-xl overflow-hidden transition-all ${ao.enabled?'border-purple-400':'border-onyx-200'}`}>
+                  <div className={`p-3 ${ao.enabled?'bg-purple-50':''}`}>
+                    <div className="flex items-center justify-between">
+                      <div><div className="flex items-center gap-2"><span className="font-medium text-sm">{def.name}</span>{def.popular&&<span className="px-1.5 py-0.5 bg-orange-200 text-orange-700 text-[9px] font-bold rounded">POPULAR</span>}</div><div className="text-xs text-onyx-500 mt-0.5">{def.desc} | Pool: ₹{def.poolBudget.toLocaleString()}/yr</div></div>
+                      <Toggle on={ao.enabled} onToggle={toggleAddon}/>
+                    </div>
+                  </div>
+                  {ao.enabled&&(
+                    <div className="p-3 border-t border-onyx-200 space-y-3">
+                      <div><div className="text-[10px] font-semibold text-onyx-600 mb-2 uppercase tracking-wide">Select members</div>
+                        <div className="flex flex-wrap gap-1.5">{members.filter(m=>m.name).map(m=>{
+                          const sel=(ao.members||[]).includes(m.id);
+                          return(<button key={m.id} onClick={()=>toggleMember(m.id)} className={`px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-all ${sel?'border-purple-600 bg-purple-100 text-purple-700':'border-onyx-200 text-onyx-500 hover:border-purple-300'}`}>{sel&&<span className="mr-1">✓</span>}{m.relation}{m.name!==m.relation?` (${m.name})`:''}</button>);
+                        })}</div>
+                      </div>
+                      <div className="bg-onyx-100 rounded-lg p-3">
+                        <div className="flex justify-between text-xs mb-1"><span className="text-onyx-500">Pool budget</span><span className="font-bold">₹{def.poolBudget.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-xs mb-1"><span className="text-onyx-500">Allocated ({(ao.members||[]).length} member{(ao.members||[]).length!==1?'s':''} × ₹{def.perMemberCost.toLocaleString()})</span><span className="font-bold text-purple-700">₹{ao.allocatedCost.toLocaleString()}</span></div>
+                        <div className="w-full bg-onyx-200 rounded-full h-2 mt-2"><div className="bg-purple-500 rounded-full h-2 transition-all" style={{width:`${Math.round(ao.allocatedCost/def.poolBudget*100)}%`}}/></div>
+                        {ao.allocatedCost<def.poolBudget&&(
+                          <div className="flex justify-between text-xs mt-2"><span className="text-green-600 flex items-center gap-1"><Wallet size={10}/>Returned to wallet</span><span className="font-bold text-green-700">₹{(def.poolBudget-ao.allocatedCost).toLocaleString()}</span></div>
+                        )}
+                      </div>
+                      <div className="space-y-1">{(ao.members||[]).map(mid=>{const m=members.find(x=>x.id===mid);if(!m)return null;return(<div key={mid} className="flex justify-between text-xs py-1 border-b border-onyx-100 last:border-0"><span className="text-onyx-700">{m.relation}{m.name!==m.relation?` (${m.name})`:''}</span><span className="font-medium text-purple-700">₹{def.perMemberCost.toLocaleString()}</span></div>);})}</div>
+                    </div>
+                  )}
+                </div>
+              );})}
+              {(config.construct==='FLEX'||config.construct==='MODULAR')&&<div className="bg-purple-100 rounded-lg p-2 text-xs text-purple-700 flex items-center gap-2"><Wallet size={12}/>Only allocated amounts deducted from wallet. Unused budget returns to your balance.</div>}
             </div>
           )}
           
-          <div className="bg-onyx-100 rounded-xl p-3"><div className="flex justify-between text-sm"><span className="text-onyx-500">Enhancement total</span><span className="font-semibold">₹{(premium.topUpCost+premium.secondaryCost+premium.addOnCost).toLocaleString()}/yr</span></div></div>
+          <div className="bg-onyx-100 rounded-xl p-3 space-y-1">
+            <div className="flex justify-between text-sm"><span className="text-onyx-500">Enhancement total</span><span className="font-semibold">₹{(premium.topUpCost+premium.secondaryCost+premium.addOnCost).toLocaleString()}/yr</span></div>
+            {addonWalletReturn>0&&<div className="flex justify-between text-xs"><span className="text-green-600">Add-on budget returned</span><span className="font-semibold text-green-700">+₹{addonWalletReturn.toLocaleString()}</span></div>}
+          </div>
         </div>
       );
       
@@ -1793,7 +1905,22 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
             <div className="p-4 space-y-4">
               <div><div className="flex justify-between text-sm mb-2"><span className="text-onyx-500">{config.construct==='FLEX'?'Wallet covers':'[Company] pays'}</span><span className="font-bold text-green-700">₹{premium.employerPays.toLocaleString()} ({Math.round(premium.employerPays/premium.total*100)}%)</span></div><div className="w-full bg-onyx-200 rounded-full h-3"><div className="bg-green-500 rounded-full h-3 transition-all" style={{width:`${Math.round(premium.employerPays/premium.total*100)}%`}}/></div></div>
               {premium.employeePays>0&&<div><div className="flex justify-between text-sm mb-2"><span className="text-onyx-500">You pay</span><span className="font-bold text-orange-700">₹{premium.employeePays.toLocaleString()} ({Math.round(premium.employeePays/premium.total*100)}%)</span></div><div className="w-full bg-onyx-200 rounded-full h-3"><div className="bg-orange-500 rounded-full h-3 transition-all" style={{width:`${Math.round(premium.employeePays/premium.total*100)}%`}}/></div></div>}
-              <div className="border-t border-onyx-200 pt-3"><div className="text-xs font-semibold text-onyx-600 mb-2">BREAKDOWN</div>{[['Base Coverage',premium.baseCost],premium.topUpCost>0&&['Top-up',premium.topUpCost],premium.secondaryCost>0&&['Secondary',premium.secondaryCost],premium.addOnCost>0&&['Add-ons',premium.addOnCost],featureCost>0&&['Coverage Features',featureCost]].filter(Boolean).map(([item,cost],i)=><div key={i} className="flex justify-between text-sm py-1.5 border-b border-onyx-100 last:border-0"><span className="text-onyx-700">{item}</span><span className="font-medium">₹{cost.toLocaleString()}</span></div>)}</div>
+              <div className="border-t border-onyx-200 pt-3">
+                <div className="text-xs font-semibold text-onyx-600 mb-2">BREAKDOWN</div>
+                <div className="flex justify-between text-sm py-1.5 border-b border-onyx-100"><span className="text-onyx-700">Base Coverage</span><span className="font-medium">₹{premium.baseCost.toLocaleString()}</span></div>
+                {premium.topUpCost>0&&<div className="flex justify-between text-sm py-1.5 border-b border-onyx-100"><span className="text-onyx-700">Top-up</span><span className="font-medium">₹{premium.topUpCost.toLocaleString()}</span></div>}
+                {premium.secondaryCost>0&&<div className="flex justify-between text-sm py-1.5 border-b border-onyx-100"><span className="text-onyx-700">Secondary</span><span className="font-medium">₹{premium.secondaryCost.toLocaleString()}</span></div>}
+                {featureCost>0&&<div className="flex justify-between text-sm py-1.5 border-b border-onyx-100"><span className="text-onyx-700">Coverage Features</span><span className="font-medium">₹{featureCost.toLocaleString()}</span></div>}
+                {ADDON_DEFS.filter(d=>addOns[d.key]?.enabled).map(d=>(
+                  <div key={d.key} className="py-1.5 border-b border-onyx-100">
+                    <div className="flex justify-between text-sm"><span className="text-onyx-700">{d.name}</span><span className="font-medium">₹{addOns[d.key].allocatedCost.toLocaleString()}</span></div>
+                    <div className="text-[10px] text-onyx-400 mt-0.5">{(addOns[d.key].members||[]).length} member(s) | Pool ₹{d.poolBudget.toLocaleString()}{addOns[d.key].allocatedCost<d.poolBudget&&<span className="text-green-600 ml-1">→ ₹{(d.poolBudget-addOns[d.key].allocatedCost).toLocaleString()} returned</span>}</div>
+                  </div>
+                ))}
+                {addonWalletReturn>0&&(config.construct==='FLEX'||config.construct==='MODULAR')&&(
+                  <div className="flex justify-between text-sm py-1.5 bg-green-50 rounded-lg px-2 mt-1"><span className="text-green-700 flex items-center gap-1"><Wallet size={12}/>Wallet return (unused add-ons)</span><span className="font-bold text-green-700">+₹{addonWalletReturn.toLocaleString()}</span></div>
+                )}
+              </div>
             </div>
           </div>
           {config.construct==='FLEX'&&premium.walletOverflow>0&&<div className="bg-orange-100 border border-orange-200 rounded-xl p-4"><div className="flex items-center gap-2 mb-1"><AlertTriangle size={16} className="text-orange-700"/><span className="font-semibold text-sm text-orange-800">Wallet Overflow</span></div><div className="text-sm text-orange-700">Exceeds wallet by <span className="font-bold">₹{premium.walletOverflow.toLocaleString()}</span></div><div className="text-xs text-orange-600 mt-1">₹{premium.monthlyEmployee}/month salary deduction</div></div>}
@@ -1808,8 +1935,22 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
           <div className="space-y-3">
             <div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><Shield size={16} className="text-purple-600"/><span className="font-semibold text-sm">Coverage</span></div><button onClick={()=>goToLayer(visibleLayers.findIndex(([l])=>l==='L2'))} className="text-xs text-purple-600 font-medium">Edit</button></div><div className="text-sm text-onyx-600">{config.construct==='MODULAR'?['Silver','Gold','Platinum'][selectedTier]+' Tier':'₹'+selectedSI+' SI'} | {familyTypes[selectedFamilyType]}</div>{Object.entries(coverageFeatures).some(([_,v])=>v)&&<div className="text-xs text-orange-700 mt-1">Features: {Object.entries(coverageFeatures).filter(([_,v])=>v).map(([k])=>COVERAGE_FEATURES.find(f=>f.id===k)?.name).join(', ')}</div>}</div>
             <div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><Users size={16} className="text-purple-600"/><span className="font-semibold text-sm">Family ({members.length})</span></div><button onClick={()=>goToLayer(visibleLayers.findIndex(([l])=>l==='L3'))} className="text-xs text-purple-600 font-medium">Edit</button></div><div className="text-sm text-onyx-600">{members.map(m=>m.relation).join(', ')}</div></div>
-            {(topUpEnabled||secondaryEnabled||Object.values(addOns).some(Boolean))&&<div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center gap-2 mb-2"><Heart size={16} className="text-purple-600"/><span className="font-semibold text-sm">Enhancements</span></div><div className="text-sm text-onyx-600 space-y-1">{topUpEnabled&&<div>Top-up: ₹{PremiumCalc.TOPUP_COST.toLocaleString()}/yr</div>}{secondaryEnabled&&<div>Secondary: ₹{PremiumCalc.SECONDARY_COST.toLocaleString()}/yr</div>}{Object.entries(addOns).filter(([_,v])=>v).map(([k])=><div key={k}>{k.charAt(0).toUpperCase()+k.slice(1)}</div>)}</div></div>}
-            {premium.employeePays>0&&<div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center gap-2 mb-2"><CreditCard size={16} className="text-purple-600"/><span className="font-semibold text-sm">Your Investment</span></div><div className="text-sm text-onyx-600">₹{premium.monthlyEmployee}/month from salary</div></div>}
+            {(topUpEnabled||secondaryEnabled||Object.values(addOns).some(a=>a.enabled))&&(
+              <div className="border border-onyx-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><Heart size={16} className="text-purple-600"/><span className="font-semibold text-sm">Enhancements</span></div><button onClick={()=>goToLayer(visibleLayers.findIndex(([l])=>l==='L4'))} className="text-xs text-purple-600 font-medium">Edit</button></div>
+                <div className="text-sm text-onyx-600 space-y-2">
+                  {topUpEnabled&&<div>Top-up: ₹{PremiumCalc.TOPUP_COST.toLocaleString()}/yr</div>}
+                  {secondaryEnabled&&<div>Secondary: ₹{PremiumCalc.SECONDARY_COST.toLocaleString()}/yr</div>}
+                  {ADDON_DEFS.filter(d=>addOns[d.key]?.enabled).map(d=>(
+                    <div key={d.key} className="bg-onyx-100 rounded-lg p-2">
+                      <div className="flex justify-between text-sm"><span className="font-medium">{d.name}</span><span className="text-purple-700 font-bold">₹{addOns[d.key].allocatedCost.toLocaleString()}</span></div>
+                      <div className="text-[10px] text-onyx-500 mt-0.5">For: {(addOns[d.key].members||[]).map(mid=>{const m=members.find(x=>x.id===mid);return m?m.relation:'?';}).join(', ')||'None'}{addOns[d.key].allocatedCost<d.poolBudget&&<span className="text-green-600 ml-1">| ₹{(d.poolBudget-addOns[d.key].allocatedCost).toLocaleString()} returned</span>}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {premium.employeePays>0&&<div className="border border-onyx-200 rounded-xl p-4"><div className="flex items-center gap-2 mb-2"><CreditCard size={16} className="text-purple-600"/><span className="font-semibold text-sm">Your Investment</span></div><div className="text-sm text-onyx-600">₹{premium.monthlyEmployee}/month from salary</div>{config.construct==='FLEX'&&<div className="text-sm text-onyx-600">₹{premium.walletUsed.toLocaleString()} from wallet</div>}{addonWalletReturn>0&&<div className="text-xs text-green-700 mt-1 font-semibold">₹{addonWalletReturn.toLocaleString()} returned from partial add-on allocation</div>}</div>}
           </div>
           <div className="space-y-3">
             <label onClick={()=>{setConsentTerms(!consentTerms);setErrors({});}} className="flex items-start gap-3 cursor-pointer"><div className={`w-5 h-5 border-2 rounded mt-0.5 flex-shrink-0 flex items-center justify-center transition-all ${consentTerms?'border-purple-600 bg-purple-600':'border-onyx-300'}`}>{consentTerms&&<CheckCircle2 size={14} className="text-white"/>}</div><span className="text-xs text-onyx-600">I agree to the terms and conditions</span></label>
@@ -1854,7 +1995,7 @@ const V2MobileSimulator = ({ config, layers, comboId }) => {
         <div className="acko-card p-5 bg-white">
           <div className="flex items-center gap-3 mb-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${submitted?'bg-green-200 text-green-700':decisions[activeLayer]==='D'?'bg-orange-200 text-orange-700':'bg-blue-200 text-blue-700'}`}><span className="font-bold text-sm">{submitted?'✓':activeLayer}</span></div><div><h3 className="font-bold text-onyx-800">{submitted?'Enrollment Complete':V2_LAYER_META[activeLayer]?.name}</h3><p className="text-xs text-onyx-500">{submitted?`${comboId} - ${config.construct}`:V2_LAYER_META[activeLayer]?.purpose}</p></div></div>
           {!submitted&&<div className="bg-purple-100 rounded-xl p-3"><div className="text-xs text-purple-600 font-semibold mb-1">CORE QUESTION</div><div className="text-sm text-purple-800 font-medium italic">"{V2_LAYER_META[activeLayer]?.question}"</div></div>}
-          <div className="mt-3 bg-onyx-100 rounded-xl p-3"><div className="text-xs font-semibold text-onyx-600 mb-2">LIVE PREMIUM</div><div className="grid grid-cols-2 gap-2 text-xs"><div>Total: <span className="font-bold">₹{premium.total.toLocaleString()}/yr</span></div><div>You pay: <span className="font-bold text-orange-700">₹{premium.monthlyEmployee}/mo</span></div>{featureCost>0&&<div className="col-span-2">Features: <span className="font-bold text-orange-700">₹{featureCost.toLocaleString()}/yr</span></div>}{config.construct==='FLEX'&&<><div>Wallet: <span className="font-bold text-green-700">₹{premium.walletUsed.toLocaleString()}</span></div><div>Overflow: <span className={`font-bold ${premium.walletOverflow>0?'text-cerise-700':'text-green-700'}`}>₹{premium.walletOverflow.toLocaleString()}</span></div></>}</div></div>
+          <div className="mt-3 bg-onyx-100 rounded-xl p-3"><div className="text-xs font-semibold text-onyx-600 mb-2">LIVE PREMIUM</div><div className="grid grid-cols-2 gap-2 text-xs"><div>Total: <span className="font-bold">₹{premium.total.toLocaleString()}/yr</span></div><div>You pay: <span className="font-bold text-orange-700">₹{premium.monthlyEmployee}/mo</span></div>{featureCost>0&&<div className="col-span-2">Features: <span className="font-bold text-orange-700">₹{featureCost.toLocaleString()}/yr</span></div>}{totalAddonAllocated>0&&<div className="col-span-2">Add-ons: <span className="font-bold text-purple-700">₹{totalAddonAllocated.toLocaleString()}/yr</span>{addonWalletReturn>0&&<span className="text-green-600 ml-1">(₹{addonWalletReturn.toLocaleString()} returned)</span>}</div>}{config.construct==='FLEX'&&<><div>Wallet: <span className="font-bold text-green-700">₹{premium.walletUsed.toLocaleString()}</span></div><div>Overflow: <span className={`font-bold ${premium.walletOverflow>0?'text-cerise-700':'text-green-700'}`}>₹{premium.walletOverflow.toLocaleString()}</span></div></>}</div></div>
         </div>
         <div className="acko-card p-5 bg-white"><h4 className="font-semibold text-sm text-onyx-800 mb-3 flex items-center gap-2"><AlertTriangle size={16} className="text-orange-500"/>Edge Cases</h4><div className="space-y-2">{(V2_LAYER_EDGE_CASES[activeLayer]||[]).map((ec,i)=>(<div key={i} className="flex items-start gap-2 text-sm text-onyx-700 p-2 bg-orange-100 rounded-lg"><AlertTriangle size={14} className="text-orange-500 mt-0.5 flex-shrink-0"/><span>{ec}</span></div>))}</div></div>
         <div className="acko-card p-5 bg-white"><h4 className="font-semibold text-sm text-onyx-800 mb-3 flex items-center gap-2"><AlertCircle size={16} className="text-cerise-500"/>Error States</h4><div className="space-y-2">{(V2_LAYER_ERRORS[activeLayer]||[]).map(err=>(<div key={err.id} className="p-2 bg-onyx-100 rounded-lg"><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${err.severity==='critical'?'bg-cerise-700':err.severity==='validation'?'bg-orange-700':err.severity==='warning'?'bg-orange-500':'bg-blue-700'}`}>{err.severity}</span><span className="text-xs font-mono text-onyx-400">{err.id}</span></div><div className="text-sm font-medium text-onyx-800 mt-1">{err.error}</div><div className="text-xs text-onyx-500">{err.message}</div></div>))}</div></div>
@@ -1963,7 +2104,7 @@ const LogicUpdatesSimulator = ({onBack}) => {
         </div>
       </main>
       
-      <footer className="bg-onyx-100 border-t border-onyx-300 py-6 mt-12"><div className="max-w-[1600px] mx-auto px-6 text-center text-onyx-500 text-sm">GMC Flow Engine Simulator — Logic Updates v5.1 | Stage 6 | L2 Always Visible + Covered Family + Premium Breakdown + Member Auto-populate</div></footer>
+      <footer className="bg-onyx-100 border-t border-onyx-300 py-6 mt-12"><div className="max-w-[1600px] mx-auto px-6 text-center text-onyx-500 text-sm">GMC Flow Engine Simulator — Logic Updates v5.2 | Stage 6 | Per-Member Add-on Allocation + Inline Parent Addition + Wallet Return</div></footer>
     </div>
   );
 };
